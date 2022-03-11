@@ -6812,3 +6812,1659 @@ fn main() {
 2
 6
 ```
+
+
+
+## DRY (不写重复代码
+
+通过提取函数或测试单元的公共部分，宏允许编写 DRY 代码（DRY 是 Don’t Repeat Yourself 的缩写，意思为“不要写重复代码”）。这里给出一个例子，实现并测试了关于 `Vec<T>` 的 `+=`、`*=` 和 `-=` 等运算符。
+
+```rust
+use std::ops::{Add, Mul, Sub};
+
+macro_rules! assert_equal_len {
+    // `tt` （token tree，令牌树）指示符用于运算符和令牌。
+    // （原文：The `tt` (token tree) designator is used for
+    // operators and tokens.）
+    ($a:ident, $b: ident, $func:ident, $op:tt) => (
+        assert!($a.len() == $b.len(),
+                "{:?}: dimension mismatch: {:?} {:?} {:?}",
+                stringify!($func),
+                ($a.len(),),
+                stringify!($op),
+                ($b.len(),));
+    )
+}
+
+macro_rules! op {
+    ($func:ident, $bound:ident, $op:tt, $method:ident) => (
+        fn $func<T: $bound<T, Output=T> + Copy>(xs: &mut Vec<T>, ys: &Vec<T>) {
+            assert_equal_len!(xs, ys, $func, $op);
+
+            for (x, y) in xs.iter_mut().zip(ys.iter()) {
+                *x = $bound::$method(*x, *y);
+                // *x = x.$method(*y);
+            }
+        }
+    )
+}
+
+// 实现 `add_assign`、`mul_assign` 和 `sub_assign` 等函数。
+op!(add_assign, Add, +=, add);
+op!(mul_assign, Mul, *=, mul);
+op!(sub_assign, Sub, -=, sub);
+
+mod test {
+    use std::iter;
+    macro_rules! test {
+        ($func: ident, $x:expr, $y:expr, $z:expr) => {
+            #[test]
+            fn $func() {
+                for size in 0usize..10 {
+                    let mut x: Vec<_> = iter::repeat($x).take(size).collect();
+                    let y: Vec<_> = iter::repeat($y).take(size).collect();
+                    let z: Vec<_> = iter::repeat($z).take(size).collect();
+
+                    super::$func(&mut x, &y);
+
+                    assert_eq!(x, z);
+                }
+            }
+        }
+    }
+
+    // 测试 `add_assign`、`mul_assign` 和 `sub_assign`
+    test!(add_assign, 1u32, 2u32, 3u32);
+    test!(mul_assign, 2u32, 3u32, 6u32);
+    test!(sub_assign, 3u32, 2u32, 1u32);
+}
+```
+
+# 16.错误处理
+
+错误处理（error handling）是处理可能发生失败情况的过程。例如读取一个文件失败，然后继续使用这个**失效的**输入显然是有问题的。错误处理允许我们以一种显式的方式来发现并处理这类错误，避免了其余代码发生潜在的问题。
+
+
+
+## 16.1`panic`
+
+我们将要看到的最简单的错误处理机制就是 `panic`。它会打印一个错误消息，种子程序并退出程序。这里我们显式地在错误条件上调用 `panic`：
+
+```rust
+fn give_princess(gift: &str) {
+    println!("I love {}s!!!!!", gift);
+
+    // 公主讨厌蛇，所以如果公主表示厌恶的话我们要停止！
+    if gift == "snake" { panic!("AAAaaaaa!!!!"); }
+
+    println!("I love s!!!!!");
+}
+
+fn main() {
+    // give_princess("teddy bear");
+    give_princess("snake");
+}
+```
+
+
+
+```
+I love snakes!!!!!
+```
+
+
+
+## 16.2`Option` & `unwrap`
+
+在上个例子中，我们显示出我们能够任意引入程序失败（program failure）。当公主收到蛇这件不合适的礼物时，我们就告诉程序产生 `panic`。但是，如果公主期待一件礼物却没收到呢？这同样是一件糟糕的事情，所以我们要想办法来解决这个问题！
+
+我们**可以**检查空字符串（`""`），就像处理蛇那样的方式。既然我们使用了 Rust，那我们就让编译器指出没有礼物的情况。
+
+在标准库（`std`）中有个叫做 `Option<T>` （option 中文意思是“选项”）的枚举类型，用于变量可能不存在的情景（原文：An `enum` called `Option<T>` in the `std` library is used when absence is a possibility. ）。它表现为以下两个 “options”（选项）中的其中一个：
+
+- `Some(T)`：找到一个属于 `T` 类型的元素
+- `None`：找不到相应元素
+
+这些选项可以通过 `match` 显式地处理，或使用 `unwrap` 隐式地处理。隐式处理会返回内部元素或 `panic`。
+
+请注意，手动使用 [expect](http://doc.rust-lang.org/std/option/enum.Option.html#method.expect) 方法自定义 `panic` 是可能的，而 `unwrap` 相比显式处理则留下不太有意义的输出。在下面例子中，显式处理得到更具可控性的结果，同时若需要的话，可将选项保留为 `panic`。（本段原文：Note that it’s possible to manually customize `panic` with [expect](http://doc.rust-lang.org/std/option/enum.Option.html#method.expect), but `unwrap` otherwise leaves us with a less meaningful output than explicit handling. In the following example, explicit handling yields a more controlled result while retaining the option to `panic` if desired. ）
+
+```rust
+// 平民（commoner）已经见过所有东西，并能妥善处理好各种情况。
+// 所有礼物都通过手动使用 `match` 来处理。
+fn give_commoner(gift: Option<&str>) {
+    // 指出每种情况下的做法。
+    match gift {
+        Some("snake") => println!("Yuck! I'm throwing that snake in a fire."),
+        Some(inner)   => println!("{}? How nice.", inner),
+        None          => println!("No gift? Oh well."),
+    }
+}
+
+// 我们受保护的公主见到蛇将会 `panic`（恐慌）。
+fn give_princess(gift: Option<&str>) {
+    // 使用 `unwrap`，当接收到 `None` 时返回一个 `panic`。
+    let inside = gift.unwrap();
+    if inside == "snake" { panic!("AAAaaaaa!!!!"); }
+
+    println!("I love {}s!!!!!", inside);
+}
+
+fn main() {
+    let food  = Some("chicken");
+    let snake = Some("snake");
+    let void  = None;
+
+    give_commoner(food);
+    give_commoner(snake);
+    give_commoner(void);
+
+    let bird = Some("robin");
+    let nothing = None;
+
+    give_princess(bird);
+    give_princess(nothing);
+}
+```
+
+
+
+```
+chicken? How nice.
+Yuck! I'm throwing that snake in a fire.
+No gift? Oh well.
+I love robins!!!!!
+thread 'main' panicked at 'called `Option::unwrap()` on a `None` value', src/main.rs:15:23
+stack backtrace:
+...
+```
+
+
+
+###  16.2.1组合算子：`map`
+
+`match` 是处理 `Option` 的一个有效方法。但是你最终会发现很多用例都相当繁琐，特别是操作只有一个有效输入的情况。在这些情况下，可以使用 [组合算子](https://doc.rust-lang.org/book/glossary.html#combinators)（combinator）以模块化方式来管理控制流。
+
+`Option` 有一个内置方法 `map()`，这个组合算子可用于简单映射`Some -> Some` 和 `None -> None` 的情况。多个不同的 `map()` 调用可以更灵活地链式连接在一起。
+
+在下面例子中，`process()` 轻松取代了前面的所有函数，且更加紧凑。
+
+```rust
+#![allow(dead_code)]
+
+#[derive(Debug)] enum Food { Apple, Carrot, Potato }
+
+#[derive(Debug)] struct Peeled(Food);
+#[derive(Debug)] struct Chopped(Food);
+#[derive(Debug)] struct Cooked(Food);
+
+// 削水果皮。如果没有水果，就返回 `None`。
+// 否则返回削好皮的水果。
+fn peel(food: Option<Food>) -> Option<Peeled> {
+    match food {
+        Some(food) => Some(Peeled(food)),
+        None       => None,
+    }
+}
+
+// 和上面一样，我们要在切水果之前确认水果是否已经削皮。
+fn chop(peeled: Option<Peeled>) -> Option<Chopped> {
+    match peeled {
+        Some(Peeled(food)) => Some(Chopped(food)),
+        None               => None,
+    }
+}
+
+// 和前面的检查类似，但是使用 `map()` 来替代 `match`。
+fn cook(chopped: Option<Chopped>) -> Option<Cooked> {
+    chopped.map(|Chopped(food)| Cooked(food))
+}
+
+// 另外一种实现，我们可以链式调用 `map()` 来简化上述的流程。
+//此处像if的正向流程，如果满足|| 闭包函数函数
+fn process(food: Option<Food>) -> Option<Cooked> {
+    food.map(|f| {Peeled(f)})
+        .map(|Peeled(f)| Chopped(f))
+        .map(|Chopped(f)| Cooked(f))
+}
+
+// 在尝试吃水果之前确认水果是否存在是非常重要的！
+fn eat(food: Option<Cooked>) {
+    match food {
+        Some(food) => println!("Mmm. I love {:?}", food),
+        None       => println!("Oh no! It wasn't edible."),
+    }
+}
+
+fn main() {
+    let apple = Some(Food::Apple);
+    let carrot = Some(Food::Carrot);
+    let potato = None;
+
+    let cooked_apple = cook(chop(peel(apple)));
+    let cooked_carrot = cook(chop(peel(carrot)));
+    // 现在让我们试试更简便的方式 `process()`。
+    // （原文：Let's try the simpler looking `process()` now.）
+    // （翻译疑问：looking 是什么意思呢？望指教。）
+    let cooked_potato = process(potato);
+
+    eat(cooked_apple);
+    eat(cooked_carrot);
+    eat(cooked_potato);
+}
+```
+
+
+
+```
+Mmm. I love Cooked(Apple)
+Mmm. I love Cooked(Carrot)
+Oh no! It wasn't edible.
+```
+
+<font color=red size=5x>`map`相当于是if的正向流程，传入的是闭包函数||，闭包函数可以省略{}</font>
+
+
+
+### 16.2.2组合算子：`and_then`
+
+`map()` 以链式调用的方式来简化 `match` 语句。然而，在返回类型是 `Option<T>` 的函数中使用 `map()` 会导致出现嵌套形式 `Option<Option<T>>`。多层链式调用也会变得混乱。所以有必要引入 `and_them()`，就像某些熟知语言中的 flatmap。
+
+`and_then()` 使用包裹的值（wrapped value）调用其函数输入并返回结果。 如果 `Option` 是 `None`，那么它返回 `None`。
+
+在下面例子中，`cookable_v2()` 会产生一个 `Option<Food>`。使用 `map()` 替代 `and_then()` 将会得到 `Option<Option<Food>>`，对 `eat()` 来说是一个无效类型。
+
+```rust
+#![allow(dead_code)]
+
+#[derive(Debug)] enum Food { CordonBleu, Steak, Sushi }
+#[derive(Debug)] enum Day { Monday, Tuesday, Wednesday }
+
+// 我们没有原材料（ingredient）来制作寿司。
+fn have_ingredients(food: Food) -> Option<Food> {
+    match food {
+        Food::Sushi => None,
+        _           => Some(food),
+    }
+}
+
+// 我们拥有全部食物的食谱，除了欠缺高超的烹饪手艺。
+fn have_recipe(food: Food) -> Option<Food> {
+    match food {
+        Food::CordonBleu => None,
+        _                => Some(food),
+    }
+}
+
+// 做一份好菜，我们需要原材料和食谱这两者。
+// 我们可以借助一系列 `match` 来表达相应的逻辑：
+// （原文：We can represent the logic with a chain of `match`es:）
+fn cookable_v1(food: Food) -> Option<Food> {
+    match have_ingredients(food) {
+        None       => None,
+        Some(food) => match have_recipe(food) {
+            None       => None,
+            Some(food) => Some(food),
+        },
+    }
+}
+
+// 这可以使用 `and_then()` 方便重写出更紧凑的代码：
+//and_then相当于是一个顺序连接的作用
+//map 相当于多个match的操作
+fn cookable_v2(food: Food) -> Option<Food> {
+    have_ingredients(food).and_then(have_recipe)
+}
+
+fn eat(food: Food, day: Day) {
+    match cookable_v2(food) {
+        Some(food) => println!("Yay! On {:?} we get to eat {:?}.", day, food),
+        None       => println!("Oh no. We don't get to eat on {:?}?", day),
+    }
+}
+
+fn main() {
+    let (cordon_bleu, steak, sushi) = (Food::CordonBleu, Food::Steak, Food::Sushi);
+
+    eat(cordon_bleu, Day::Monday);
+    eat(steak, Day::Tuesday);
+    eat(sushi, Day::Wednesday);
+}
+```
+
+
+
+```
+Oh no. We don't get to eat on Monday?
+Yay! On Tuesday we get to eat Steak.
+Oh no. We don't get to eat on Wednesday?
+```
+
+
+
+## 16.3结果 `Result`
+
+[`Result`](http://doc.rust-lang.org/std/result/enum.Result.html) 是 [`Option`](http://doc.rust-lang.org/std/option/enum.Option.html) 类型的更丰富的版本，描述的是可能的**错误**而不是可能的**不存在**。
+
+也就是说，`Result<T，E>` 可以有两个结果的其中一个：
+
+- `Ok<T>`：找到 `T` 元素
+- `Err<E>`：发现错误，使用元素 `E` 表示（An error was found with element `E`）
+
+按照约定，预期结果是 “Ok”，而意外结果是 “Err”。
+
+和 `Option` 类似，`Result` 也有很多相关联的方法。例如 `unwrap（）`，能够产生元素 `T` 或 `panic`。 对于事件的处理，`Result` 和 `Option` 两者间有很多组合算子重叠。
+
+使用 Rust 过程中，你可能会遇到返回 `Result` 类型的方法，例如 [`parse()`](https://doc.rust-lang.org/std/primitive.str.html#method.parse) 方法。 它在某些情况下可能不能将一个字符串解析为另一种类型，所以 `parse()` 返回一个 `Result` 表示可能的失败。
+
+我们来看看当 `parse()` 字符串成功和失败时会发生什么：
+
+```rust
+fn double_number(number_str: &str) -> i32 {
+    // 让我们尝试使用 `unwrap()` 把数字取出来。它会咬我们吗？
+    // println!("{}",number_str.parse::<i32>().)
+    //`Result<i32, ParseIntError>` doesn't implement `Display` (required by {})
+    2 * number_str.parse::<i32>().unwrap()
+}
+
+fn main() {
+    let twenty = double_number("10");
+    println!("double is {}", twenty);
+
+    let tt = double_number("t");
+    println!("double is {}", tt);
+}
+
+// 在失败的情况下，parse() 留给我们一个错误，让 unwrap() 产生 panic
+// （原文：parse() leaves us with an error for unwrap() to panic on）。
+// 另外，panic 会退出我们的程序，并提供一个不愉快的错误消息。
+//
+// 为了改善错误消息的质量，我们应该更具体地了解返回类型并考虑显式地处理错误。
+```
+
+
+
+```
+double is 20
+thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: ParseIntError { kind: InvalidDigit }', src/main.rs:3:35
+```
+
+<font color=red size=5x>字符转数字` number_str.parse::<i32>().unwrap()`</font>
+
+### 16.3.1关于 `Result` 的 `map`
+
+前面关于 panic 例子，提供给我们的是一个无用的错误消息。为了避免这样，我们需要更具体地指定返回类型。在那个例子中，该常规元素为 `i32` 类型。
+
+为了确定 `Err` 的类型，我们可以借助 [`parse()`](https://doc.rust-lang.org/std/primitive.str.html#method.parse)，它使用 [`FromStr`](http://doc.rust-lang.org/std/str/trait.FromStr.html) trait 来针对 [`i32`](http://doc.rust-lang.org/std/primitive.i32.html) 实现。结果是，`Err` 类型被指定为 [`ParseIntError`](http://doc.rust-lang.org/std/num/struct.ParseIntError.html)。
+
+在下面例子中要注意，使用简单的 `match` 语句会导致更加繁琐的代码。事实证明，用到 `Option` 的 `map` 方法也对 `Result` 进行了实现。
+
+幸运的是，`Option` 的 `map` 方法是对 `Result` 进行了实现的许多组合算子之一。 [`enum.Result`](http://doc.rust-lang.org/std/result/enum.Result.html) 包含一个完整的列表。
+
+```rust
+use std::num::ParseIntError;
+
+// 返回类型重写之后，我们使用模式匹配，而不使用 `unwrap()`。
+fn double_number(number_str: &str) -> Result<i32, ParseIntError> {
+    match number_str.parse::<i32>() {
+        Ok(n)  => Ok(2 * n),
+        Err(e) => Err(e),
+    }
+}
+
+// 就像 `Option`，我们可以使用组合算子，如 `map()`。
+// 此函数在其他方面和上述的示例一样，并表示：
+// 若值有效则修改 n，否则传递错误。
+fn double_number_map(number_str: &str) -> Result<i32, ParseIntError> {
+    number_str.parse::<i32>().map(|n| 2 * n)
+}
+
+fn print(result: Result<i32, ParseIntError>) {
+    match result {
+        Ok(n)  => println!("n is {}", n),
+        Err(e) => println!("Error: {}", e),
+    }
+}
+
+fn main() {
+    // 这里仍然给出一个合理的答案。
+    let twenty = double_number("10");
+    print(twenty);
+
+    // 下面提供了更加有用的错误消息。
+    let tt = double_number_map("t");
+    print(tt);
+}
+```
+
+
+
+```
+n is 20
+Error: invalid digit found in string
+```
+
+
+
+### 16.3.2给 `Result` 起别名
+
+当我们要重复多次使用特定的 `Result` 类型怎么办呢？回忆一下，Rust 允许我们创建[别名](https://llever.com/rust-by-example-cn/error/result/cast/alias.html)。对问题中提到的特定 `Result`，我们可以很方便地给它定义一个别名。
+
+在单个模块的级别上创建别名特别有帮助。在特定模块中发现的错误常常会有相同的 `Err` 类型，所以一个单一的别名就能简便地定义**所有的**关联 `Result`。这点太重要了，甚至标准库也提供了一个： `io::Result`！
+
+下面给出一个快速示例来展示语法：
+
+```rust
+use std::num::ParseIntError;
+
+// 为带有错误类型 `ParseIntError` 的 `Result` 定义一个泛型别名。
+type AliasedResult<T> = Result<T, ParseIntError>;
+
+// 使用上面定义过的别名来表示我们特指的 `Result` 类型。
+fn double_number(number_str: &str) -> AliasedResult<i32> {
+    number_str.parse::<i32>().map(|n| 2 * n)
+}
+
+// 这里的别名又让我们节省了一些空间（save some space）。
+fn print(result: AliasedResult<i32>) {
+    match result {
+        Ok(n)  => println!("n is {}", n),
+        Err(e) => println!("Error: {}", e),
+    }
+}
+
+fn main() {
+    print(double_number("10"));
+    print(double_number("t"));
+}
+```
+
+
+
+```
+n is 20
+Error: invalid digit found in string
+```
+
+
+
+## 16.4各种错误类型
+
+前面出现的例子确实很方便；都是 `Result` 和其他 `Result` 交互，还有 `Option` 和其他 `Option` 交互。
+
+有时 `Option` 需要和 `Result` 进行交互，或是 `Result<T, Error1>` 需要和 `Result<T, Error2` 进行交互。在这类情况下，我们想要以一种方式来管理不同的错误类型，使得它们可组合且易于交互。
+
+在下面代码中，`unwrap` 的两个实例生成了不同的错误类型。`Vec::first` 返回一个 `Option`，而 `parse::<i32>` 返回一个 `Result<i32, ParseIntError>`：
+
+```rust
+fn double_first(vec: Vec<&str>) -> i32 {
+    let first = vec.first().unwrap(); // 生成错误1
+    2 * first.parse::<i32>().unwrap() // 生成错误2
+}
+
+fn main() {
+    let empty = vec![];
+    let strings = vec!["tofu", "93", "18"];
+
+    //thread 'main' panicked at 'called `Option::unwrap()` on a `None` value', src/main.rs:2:29
+    println!("The first doubled is {}", double_first(empty));
+    // 错误1：输入 vector 为空
+
+    println!("The first doubled is {}", double_first(strings));
+    // 错误2：此元素不能解析成数字
+}
+```
+
+
+
+```
+
+```
+
+使用组合算子的知识，我们能够重写上述代码来显式地处理错误。为了做到两种错误类型都能够出现，我们需要将他们转换为一种通用类型，比如 `String` 类型。
+
+就这样，我们将 `Option` 和 `Result` 都转换成 `Result`，从而将他们的错误类型映射成相同的类型：
+
+```rust
+// 使用 `String` 作为错误类型
+type Result<T> = std::result::Result<T, String>;
+
+fn double_first(vec: Vec<&str>) -> Result<i32> {
+    vec.first()
+        // 若值存在则将 `Option` 转换成 `Result`。
+        // 否则提供一个包含该字符串（`String`） 的 `Err`。
+        .ok_or("Please use a vector with at least one element.".to_owned())
+        // 回想一下，`parse` 返回一个 `Result<T, ParseIntError>`。
+        .and_then(|s| s.parse::<i32>()
+            // 映射任意错误 `parse` 产生得到 `String`。
+            // （原文：Map any errors `parse` yields to `String`.）
+            .map_err(|e| e.to_string())
+            // `Result<T, String>` 成为新的返回类型，
+            // 我们可以给里面的数字扩大两倍。
+            .map(|i| 2 * i))
+}
+
+fn print(result: Result<i32>) {
+    match result {
+        Ok(n)  => println!("The first doubled is {}", n),
+        Err(e) => println!("Error: {}", e),
+    }
+}
+
+fn main() {
+    let empty = vec![];
+    let strings = vec!["tofu", "93", "18"];
+
+    print(double_first(empty));
+    print(double_first(strings));
+}
+```
+
+
+
+```
+Error: Please use a vector with at least one element.
+Error: invalid digit found in string
+```
+
+### 16.4.1提前返回
+
+在前面的例子中，我们使用组合算子显式地处理错误。 另一种处理这种情形分解的方法是使用 `match` 语句和**提前返回**（*early returns*）的组合形式。
+
+也就是说，我们可以简单地停止执行函数并返回错误（若发生的话）。 而且这种形式的代码更容易阅读和编写。考虑如下版本，这是将之前的例子使用提前返回方式重写的：
+
+```rust
+// 使用 `String` 作为错误类型
+type Result<T> = std::result::Result<T, String>;
+
+fn double_first(vec: Vec<&str>) -> Result<i32> {
+    // 若存在值时，则将 `Option` 转换成 `Result`。
+    // 否则提供一个包含此 `String` 的 `Err`。
+    let first = match vec.first() {
+        Some(first) => first,
+        None => return Err("Please use a vector with at least one element.".to_owned())
+    };
+
+    // 若 `parse` 操作正常的话，则将内部的数字扩大 2 倍。
+    // 否则映射任意错误，来自 `parse` 产生的 `String`。
+    // （原文：Double the number inside if `parse` works fine.
+    // Otherwise, map any errors that `parse` yields to `String`.）
+    match first.parse::<i32>() {
+        Ok(i) => Ok(2 * i),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+fn print(result: Result<i32>) {
+    match result {
+        Ok(n)  => println!("The first doubled is {}", n),
+        Err(e) => println!("Error: {}", e),
+    }
+}
+
+fn main() {
+    let empty = vec![];
+    let strings = vec!["tofu", "93", "18"];
+
+    print(double_first(empty));
+    print(double_first(strings));
+}
+```
+
+
+
+```
+Error: Please use a vector with at least one element.
+Error: invalid digit found in string
+```
+
+### 16.4.2介绍 `try!`
+
+有时我们只是想要 `unwrap` 的简单，而又不会产生 `panic`。截至目前，`unwrap` 迫使我们嵌套了一层又一层，而我们想要的只不过是将相应的变量取出来。正因为这样，我们引入了 `try!`。
+
+在发现错误（`Err`）时，有两个有效的操作：
+
+1. `panic!`，但我们已经尽可能回避这种情况
+2. `return`，因为 `Err` 意味着它不能被处理
+
+`try!` **几乎完全**[1](https://llever.com/rust-by-example-cn/error/multiple_error_types/enter_try.html#1)等同于一个这样的 `unwrap`——对待错误（`Err`）采用返回的方式而不是 `panic。我们来看看如何简化之前使用组合算子的示例：
+
+```rust
+// 使用 `String` 作为错误类型
+type Result<T> = std::result::Result<T, String>;
+
+fn double_first(vec: Vec<&str>) -> Result<i32> {
+    let first = vec.first()
+        .ok_or("Please use a vector with at least one element.".to_owned())?;
+
+    /*
+    和上边的一样，但是编辑器推荐这种
+    let first = vec.first()
+        .ok_or("Please use a vector with at least one element.".to_owned())?;
+
+     */
+    // try!() 这种1.58不适合了 替代的是 ？
+    
+    // let value = try!(first.parse::<i32>()
+    //     .map_err(|e| e.to_string()));
+
+    let value = first.parse::<i32>()
+        .map_err(|e| e.to_string())?;
+
+    Ok(2 * value)
+}
+
+fn print(result: Result<i32>) {
+    match result {
+        Ok(n)  => println!("The first doubled is {}", n),
+        Err(e) => println!("Error: {}", e),
+    }
+}
+
+fn main() {
+    let empty = vec![];
+    let strings = vec!["tofu", "93", "18"];
+
+    print(double_first(empty));
+    print(double_first(strings));
+}
+```
+
+
+
+```
+Error: Please use a vector with at least one element.
+Error: invalid digit found in string
+```
+
+注意到目前为止，我们一直使用 `String` 作为错误类型。但它们作为错误类型是有一定限制的。在下一节中，我们将学习如何通过自定义类型来创建更具结构化和更多信息量的错误。
+
+## 16.5定义一个错误类型
+
+前面我们一直使用字符串（`String`）作为错误消息。实际上，字符串作为错误类型是存在一些局限的。下面是友好的错误类型标准。字符串（`String`）很好地实现了前两点，但无法做到后两点： Rust 允许自定义错误类型。一般而言，一个“良好”的错误类型：
+
+- 使用相同类型来表达不同的错误
+- 给用户提供友好的错误信息
+- 方便和其他类型比较
+  - Good: `Err(EmptyVec)`
+  - Bad: `Err("Please use a vector with at least one element".to_owned())`
+- 能够保存错误的信息（原文：Can hold information about the error.）：
+  - Good: `Err(BadChar(c, position))`
+  - Bad: `Err("+ cannot be used here".to_owned())`
+
+可以看到字符串（`String`）（前面我一们一值在用）可以地满足前两点标准，但后两条无法满足。这使得 `String` 错误既难以创建，也难以达到要求。仅仅为了优雅地显示，实在不应该使用 `String` 格式化方式污染大量的逻辑代码（原文：It should not be necessary to pollute logic heavy code with `String` formatting simply to display nicely.）。
+
+```rust
+use std::num::ParseIntError;
+use std::fmt;
+
+type Result<T> = std::result::Result<T, DoubleError>;
+
+#[derive(Debug)]
+// 定义我们的错误类型。不管对我们的错误处理情况有多重要，这些都可能自定义。
+// 现在我们能够按照底层工具的错误实现，写下我们的错误，或者两者之间的内容。
+// （原文：Define our error types. These may be customized however is useful for our error
+// handling cases. Now we will be able to defer to the underlying tools error
+// implementation, write our own errors, or something in between.）
+enum DoubleError {
+    // 我们不需要任何额外的信息来描述这个错误。
+    EmptyVec,
+    // 我们将推迟对于这些错误的解析错误的实现。（原文：We will defer to the parse
+    // error implementation for their error.）提供额外信息将要增加更多针对类型的数据。
+    Parse(ParseIntError),
+}
+
+// 类型的展示方式的和类型的产生方式是完全独立的。我们无需担心显示样式会搞乱我们
+// 工具集所需的复杂逻辑。它们是独立的，就是说它们处理起来是相互独立的。
+//
+// 我们没有存储关于错误的额外信息。若确实想要，比如，要指出哪个字符串无法解析，
+// 那么我们不得不修改我们类型来携带相应的信息。
+impl fmt::Display for DoubleError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            DoubleError::EmptyVec =>
+                write!(f, "please use a vector with at least one element"),
+            // 这是一个 wrapper，所以按照底层类型来给出我们的 `fmt` 实现。
+            // （原上：This is a wrapper so defer to the underlying types' own implementation
+            // of `fmt`.）
+            DoubleError::Parse(ref e) => e.fmt(f),
+        }
+    }
+}
+
+fn double_first(vec: Vec<&str>) -> Result<i32> {
+    vec.first()
+        // 将错误改成我们新的类型。
+        .ok_or(DoubleError::EmptyVec)
+        .and_then(|s| s.parse::<i32>()
+            // 在这里也更新成新的错误类型。
+            .map_err(DoubleError::Parse)
+            .map(|i| 2 * i))
+}
+
+fn print(result: Result<i32>) {
+    match result {
+        Ok(n)  => println!("The first doubled is {}", n),
+        Err(e) => println!("Error: {}", e),
+    }
+}
+
+fn main() {
+    let numbers = vec!["93", "18"];
+    let empty = vec![];
+    let strings = vec!["tofu", "93", "18"];
+
+    print(double_first(numbers));
+    print(double_first(empty));
+    print(double_first(strings));
+}
+```
+
+
+
+```
+The first doubled is 186
+Error: please use a vector with at least one element
+Error: invalid digit found in string
+```
+
+
+
+## 16.6`try!` 的其他用法
+
+注意在前面的例子中，我们对调用 `parse` 的最直接反应就是将错误从库错误映射到我们的新的自定义错误类型（原文：Notice in the previous example that our immediate reaction to calling `parse` is to `map` the error from a library error into our new custom error type）：
+
+```rust
+.and_then(|s| s.parse::<i32>()
+    .map_err(DoubleError::Parse)
+```
+
+这是一个很简单且常见的操作，要是它能够省略的话将会相当方便。可惜的是，因为 `and_then` 不够灵活，所以它不能。但是，我们可改用 `try!`。
+
+`try!` 在前面已经解释过，它可以充当 ==unwrap` 或 `return Err(err)==，这说法只是很大程度上是对的。实际上它意味着 `unwrap` 或者 `return Err(From::from(err))`。由于 `From::from` 是一个不同类型间相互转换的工具，所以如果你使用 `try!`，当中的错误若能够转换成返回类型，这将会自动转换。
+
+在这里，我们使用 `try!` 重写前面的例子。结果可看到，`From::from` 已对我们的错误类型提供实现时，`map_err` 将会消失：
+
+```rust
+use std::num::ParseIntError;
+use std::fmt;
+
+type Result<T> = std::result::Result<T, DoubleError>;
+
+#[derive(Debug)]
+enum DoubleError {
+    EmptyVec,
+    Parse(ParseIntError),
+}
+
+// 实现从 `ParseIntError` 到 `DoubleError` 的转换。如果一个 `ParseIntError`
+// 需要转换成 `DoubleError`，这将会被 `try!` 自动调用。
+impl From<ParseIntError> for DoubleError {
+    fn from(err: ParseIntError) -> DoubleError {
+        DoubleError::Parse(err)
+    }
+}
+
+impl fmt::Display for DoubleError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            DoubleError::EmptyVec =>
+                write!(f, "please use a vector with at least one element"),
+            DoubleError::Parse(ref e) => e.fmt(f),
+        }
+    }
+}
+
+// 和前面的结构一样，但没有将全部的 `Results` 和 `Options` 链接在一起，
+// 我们使用 `try!` 立即得到内部的值。
+// （原文：// The same structure as before but rather than chain all `Results`
+// and `Options` along, we `try!` to get the inner value out immediately.）
+fn double_first(vec: Vec<&str>) -> Result<i32> {
+    // 仍然转为 `Result`，通过规定怎样转为 `None`。
+    // （原上：// Still convert to `Result` by stating how to convert `None`.）
+
+    ////////////////////////
+    // 版本1.58 try!() 变为 ？ 不然报错
+    ///////////////////////
+
+    // let first = try!(vec.first().ok_or(DoubleError::EmptyVec));
+    let first = vec.first().ok_or(DoubleError::EmptyVec)?;
+
+    //error: use of deprecated `try` macro
+    // let parsed = try!(first.parse::<i32>());
+
+    let parsed = first.parse::<i32>()?;
+
+    Ok(2 * parsed)
+}
+
+fn print(result: Result<i32>) {
+    match result {
+        Ok(n)  => println!("The first doubled is {}", n),
+        Err(e) => println!("Error: {}", e),
+    }
+}
+
+fn main() {
+    let numbers = vec!["93", "18"];
+    let empty = vec![];
+    let strings = vec!["tofu", "93", "18"];
+
+    print(double_first(numbers));
+    print(double_first(empty));
+    print(double_first(strings));
+}
+```
+
+
+
+```
+The first doubled is 186
+Error: please use a vector with at least one element
+Error: invalid digit found in string
+
+```
+
+
+
+## 16.7使用 `Box` 处理错误
+
+通过对错误类型实现 `Display` 和 `From`，我们能够利用上绝大部分标准库错误处理工具。然而，我们遗漏了一个功能：轻松 `Box` 我们错误类型的能力。
+
+标准库会自动通过 `Form` 将任意实现了 `Error` trait 的类型转换成 trait 对象 `Box<Error>` 的类型（原文：The `std` library automatically converts any type that implements the `Error` trait into the trait object `Box<Error>`, via `From`. ）。对于一个库用户，下面可以很容易做到：
+
+```rust
+fn foo(...) -> Result<T, Box<Error>> { ... }
+```
+
+用户可以使用一系列外部库，其中每个都提供各自错误类型。为了定义一个有效的 `Result<T, E>` 类型，用户有几个选择：
+
+- 定义一个新的限定在外部库错误类型的包装（wrapper）错误类型（原文：define a new wrapper error type around the libraries error types）
+- 将错误类型转换成 `String` 或者其他合适的选择
+- 通过类型擦除（type erasure）将错误类型装包（`Box`）成 `Box<Error>`
+
+将内容“装包”（”Boxing”）是一个常见的选择。缺点是潜在的错误类型只能在运行时知道，且不能[静态确定](http://doc.rust-lang.org/book/trait-objects.html#dynamic-dispatch)（statically determined）。正如刚才提到的，要做到这点所有要做的事情就是实现 `Error` trait：
+
+```rust
+trait Error: Debug + Display {
+    fn description(&self) -> &str;
+    fn cause(&self) -> Option<&Error>;
+}
+```
+
+有了这个实现后，我们再来回顾前面学过的最近例子。注意到它所带的错误类型 `Box<Error>` 也变成有效的了，就像前面用到的 `DoubleError` 那样（原文：With this implementation, let’s look at our most recent example. Note that it is just as valid with the error type of `Box<Error>` as it was before with `DoubleError`）：
+
+```rust
+use std::error;
+use std::fmt;
+use std::num::ParseIntError;
+
+// 将别名更改为 `Box<error::Error>`。
+type Result<T> = std::result::Result<T, Box<dyn error::Error>>;
+
+#[derive(Debug)]
+enum DoubleError {
+    EmptyVec,
+    Parse(ParseIntError),
+}
+
+impl From<ParseIntError> for DoubleError {
+    fn from(err: ParseIntError) -> DoubleError {
+        DoubleError::Parse(err)
+    }
+}
+
+impl fmt::Display for DoubleError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            DoubleError::EmptyVec =>
+                write!(f, "please use a vector with at least one element"),
+            DoubleError::Parse(ref e) => e.fmt(f),
+        }
+    }
+}
+
+//此处 `match` arms have incompatible types
+//任何类型都实现了error 
+impl error::Error for DoubleError {
+    // fn description(&self) -> &str {
+    //     match *self {
+    //         // 错误的简短说明。不需要和 `Display` 一样。
+    //         DoubleError::EmptyVec => "empty vectors not allowed",
+    //         // 这已经实现了 `Error`，所以遵循它自己的实现。
+    //         DoubleError::Parse(ref e) => e.to_string(),
+    //     }
+    // }
+    //
+    // fn cause(&self) -> Option<&dyn error::Error> {
+    //     match *self {
+    //         // 没有潜在的差错，所以返回 `None`。
+    //         DoubleError::EmptyVec => None,
+    //         // 差错为底层实现的错误类型。被隐式地转换成 trait 对象 `&error::Error`。
+    //         // 这会正常工作，因为底层的类型已经实现了 `Error` trait。
+    //         DoubleError::Parse(ref e) => Some(e),
+    //     }
+    // }
+}
+
+fn double_first(vec: Vec<&str>) -> Result<i32> {
+    let first = vec.first().ok_or(DoubleError::EmptyVec)?;
+    let parsed = first.parse::<i32>()?;
+
+    Ok(2 * parsed)
+}
+
+fn print(result: Result<i32>) {
+    match result {
+        Ok(n)  => println!("The first doubled is {}", n),
+        Err(e) => println!("Error: {}", e),
+    }
+}
+
+fn main() {
+    let numbers = vec!["93", "18"];
+    let empty = vec![];
+    let strings = vec!["tofu", "93", "18"];
+
+    print(double_first(numbers));
+    print(double_first(empty));
+    print(double_first(strings));
+}
+```
+
+
+
+```
+The first doubled is 186
+Error: please use a vector with at least one element
+Error: invalid digit found in string
+```
+
+
+
+# 17.标准库类型
+
+标准库提供了很多自定义类型，在**原生类型**基础上进行了大量扩充。这是部分自定义类型：
+
+- 可增长的 `String`（可增长的字符串），如: `"hello world"`
+- 可增长的 vector: `[1, 2, 3]`
+- 选项类型（optional types）: `Option<i32>`
+- 错误处理类型（error handling types）: `Result<i32, i32>`
+- 堆分配的指针（heap allocated pointers）: `Box<i32>`
+
+[参见：](https://llever.com/rust-by-example-cn/std.html#a参见)
+
+[原生类型](https://llever.com/rust-by-example-cn/primitives.html) 和 [标准库](http://doc.rust-lang.org/std/)
+
+## 17.1 Box, 以及栈和堆
+
+在 Rust 中，所有值默认都由栈分配。值也可以通过创建 `Box<T>` 来**装箱**（boxed，分配在堆上）。装箱类型是一个智能指针，指向堆分配的 `T` 类型的值。当一个装箱类型离开作用域时，它的析构器会被调用，内部的对象会被销毁，分配在堆上内存会被释放。
+
+**装箱**的值可以使用 `*` 运算符进行解引用；这会移除掉一个间接层（this removes one layer of indirection. ）。
+
+```rust
+use std::mem;
+
+#[derive(Clone, Copy)]
+struct Point {
+    x: f64,
+    y: f64,
+}
+
+#[allow(dead_code)]
+struct Rectangle {
+    p1: Point,
+    p2: Point,
+}
+
+fn origin() -> Point {
+    Point { x: 0.0, y: 0.0 }
+}
+
+fn boxed_origin() -> Box<Point> {
+    // 在堆上分配这个点（point），并返回一个指向它的指针
+    Box::new(Point { x: 0.0, y: 0.0 })
+}
+
+fn main() {
+    // （所有的类型标注都是可要可不要的）
+    // 栈分配的变量
+    let point: Point = origin();
+    let rectangle: Rectangle = Rectangle {
+        p1: origin(),
+        p2: Point { x: 3.0, y: 4.0 }
+    };
+
+    // 堆分配的 rectangle（矩形）
+    let boxed_rectangle: Box<Rectangle> = Box::new(Rectangle {
+        p1: origin(),
+        p2: origin()
+    });
+
+    // 函数的输出可以装箱（boxed）
+    let boxed_point: Box<Point> = Box::new(origin());
+
+    // 双重间接装箱（Double indirection）
+    //指针引用就是双重简介装箱
+    let box_in_a_box: Box<Box<Point>> = Box::new(boxed_origin());
+
+    println!("Point occupies {} bytes in the stack",
+             mem::size_of_val(&point));
+    println!("Rectangle occupies {} bytes in the stack",
+             mem::size_of_val(&rectangle));
+
+    // box 的大小 = 指针 大小（box size = pointer size）
+    println!("Boxed point occupies {} bytes in the stack",
+             mem::size_of_val(&boxed_point));
+    println!("Boxed rectangle occupies {} bytes in the stack",
+             mem::size_of_val(&boxed_rectangle));
+    println!("Boxed box occupies {} bytes in the stack",
+             mem::size_of_val(&box_in_a_box));
+
+    // 将包含在 `boxed_point` 的数据复制到 `unboxed_point`
+    let unboxed_point: Point = *boxed_point;
+    println!("Unboxed point occupies {} bytes in the stack",
+             mem::size_of_val(&unboxed_point));
+}
+```
+
+
+
+```
+warning: field is never read: `x1`
+ --> src/main.rs:5:5
+  |
+5 |     x1: f64,
+  |     ^^^^^^^
+  |
+  = note: `#[warn(dead_code)]` on by default
+
+warning: field is never read: `y`
+ --> src/main.rs:6:5
+  |
+6 |     y: f64,
+  |     ^^^^^^
+
+warning: `code` (bin "code") generated 2 warnings
+    Finished dev [unoptimized + debuginfo] target(s) in 0.75s
+
+Point occupies 16 bytes in the stack
+Rectangle occupies 32 bytes in the stack
+Boxed point occupies 8 bytes in the stack
+Boxed rectangle occupies 8 bytes in the stack
+Boxed box occupies 8 bytes in the stack
+Unboxed point occupies 16 bytes in the stack
+```
+
+
+
+## 17.2 动态数组 vector
+
+vector 是可变大小的数组。和 slice（切片）类似，它们的大小在编译期不可预知，但他们可以随时扩大或缩小。一个 vector 使用 3 个词来表示：一个指向数据的指针，它的长度，还有它的容量。此容量表明了分配多少内存给这 vector。vector 只要小于该容量，就可以随意增长。当临界值就要达到时，vector 会重新分配一个更大的容量。
+
+```rust
+fn main() {
+    // 迭代器可以收集到 vector
+    let collected_iterator: Vec<i32> = (0..10).collect();
+    println!("Collected (0..10) into: {:?}", collected_iterator);
+
+
+    // `vec!` 宏可用来初始化一个 vector
+    let mut xs = vec![1i32, 2, 3];
+    println!("Initial vector: {:?}", xs);
+
+    // 在 vector 的尾部插入一个新的元素
+    println!("Push 4 into the vector");
+    xs.push(4);
+    println!("Vector: {:?}", xs);
+
+    // 报错！不可变 vector 不可增长
+    //Cannot borrow immutable local variable `collected_iterator` as mutable
+    // collected_iterator.push(0);
+    // 改正 ^ 将此行注释掉
+
+    // `len` 方法获得一个 vector 的当前大小
+    println!("Vector size: {}", xs.len());
+
+    // 在中括号上加索引（索引从 0 开始）
+    println!("Second element: {}", xs[1]);
+
+    // `pop` 移除 vector 的最后一个元素并将它返回
+    println!("Pop last element: {:?}", xs.pop());
+
+    // 超出索引范围将抛出一个 panic
+    //thread 'main' panicked at 'index out of bounds: the len is 3 but the index is 3', src/main.rs:31:36
+    // stack backtrace:
+    // println!("Fourth element: {}", xs[3]);
+
+    println!("==================");
+    let box_ :Box<i32> = Box::new(4_i32);
+    println!("box_ is {}",box_);
+    let mut xs = vec![1i32, 2, 3];
+    println!("vec! vector: {:?}", xs);
+
+
+}
+```
+
+
+
+```
+warning: variable does not need to be mutable
+  --> src/main.rs:38:9
+   |
+38 |     let mut xs = vec![1i32, 2, 3];
+   |         ----^^
+   |         |
+   |         help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` on by default
+
+warning: `code` (bin "code") generated 1 warning
+    Finished dev [unoptimized + debuginfo] target(s) in 0.72s
+     Running `/Users/zhangqiuli24/Desktop/rust/code/target/debug/code`
+Collected (0..10) into: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+Initial vector: [1, 2, 3]
+Push 4 into the vector
+Vector: [1, 2, 3, 4]
+Vector size: 4
+Second element: 2
+Pop last element: Some(4)
+==================
+box_ is 4
+vec! vector: [1, 2, 3]
+```
+
+warning 原因： 不可变引用没有被使用
+
+## 17.3 字符串 String
+
+Rust 中有两种字符串类型：`String` 和 `&str`。
+
+`String` 被存储为一个字节形式（`Vec<u3>`）的vector ，但确保一定是一个有效的 UTF-8 序列。`String` 是堆分配的，可增大且无上限。
+
+`&str` 是一个指向有效 UTF-8 序列的切片（`&[u8]`），并可在用来查看 `String` 的内容，就如同 `&[T]` 是 `Vec<T>` 的全部或部分引用。（原文：`&str` is a slice (`&[u8]`) that always points to a valid UTF-8 sequence, and can be used to view into a `String`, just like `&[T]` is a view into `Vec<T>`.）（您是否有更好的翻译？请改进此句翻译，感谢！）
+
+```rust
+// String 被存储为一个字节形式（Vec<u3>）的vector ，但确保一定是一个有效的 UTF-8 序列。String 是堆分配的，可增大且无上限。
+//
+// &str 是一个指向有效 UTF-8 序列的切片（&[u8]），并可在用来查看 String 的内容，就如同 &[T] 是 Vec<T> 的全部或部分引用。
+fn main() {
+    // （所有的类型标注都是都是多余）
+    // 一个指向在只读内存中堆分配字符串的引用
+    let pangram: &'static str = "the quick brown fox jumps over the lazy dog";
+    println!("Pangram: {}", pangram);
+
+    // 逆序迭代单词，不用分配新的字符串
+    // （原文：Iterate over words in reverse, no new string is allocated）
+    println!("Words in reverse");
+    //反转输出
+    // for word in pangram.split_whitespace().rev() {
+    for word in pangram.split_whitespace() {
+        println!("> {}", word);
+    }
+
+    // 复制字符到一个 vector，排序并移除重复值
+    let mut chars: Vec<char> = pangram.chars().collect();
+    chars.sort();
+    chars.dedup();
+
+    // 创建一个空的且可增长的 `String`
+    let mut string = String::new();
+    for c in chars {
+        // 在字符串的尾部插入一个字符
+        string.push(c);
+        // 在字符串尾部插入一个字符串
+        string.push_str(", ");
+    }
+
+
+
+
+
+    // 此切割的字符串是原字符串的一个切片，所以没有执行新分配操作
+    //去除多个要去除的
+    let chars_to_trim: &[char] = &[' ', ','];
+    let trimmed_str: &str = string.trim_matches(chars_to_trim);
+
+    println!("string is {:?}",string);
+    println!("chars_to_trim is {:?}",chars_to_trim);
+    println!("Used characters: {}", trimmed_str);
+
+    // 堆分配一个字符串
+    let alice = String::from("I like dogs");
+    // 分配新内存并存储修改过的字符串
+    let bob: String = alice.replace("dog", "cat");
+
+    println!("Alice says: {}", alice);
+    println!("Bob says: {}", bob);
+
+    println!("==================");
+    let box_ :Box<i32> = Box::new(4_i32);
+    println!("box_ is {}",box_);
+    let  xs = vec![1i32, 2, 3];
+    println!("vec! vector: {:?}", xs);
+
+    let mut str = String::new();
+    str.push_str("kkk");
+    println!("{}",str)
+}
+```
+
+
+
+```
+Words in reverse
+> the
+> quick
+> brown
+> fox
+> jumps
+> over
+> the
+> lazy
+> dog
+string is " , a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, "
+chars_to_trim is [' ', ',']
+Used characters: a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z
+Alice says: I like dogs
+Bob says: I like cats
+==================
+box_ is 4
+vec! vector: [1, 2, 3]
+kkk
+
+```
+
+
+
+## 17.4选项 `Option`
+
+有时候想要捕捉到程序某部分的失败信息，而不调用 `panic!`；这可使用 `Option` 枚举来完成。
+
+`Option<T>` 枚举有两个变量：
+
+- `None`，表明失败或缺少值
+- `Some(value)`，元组结构体，使用 `T` 类型装包了一个值 `value`
+
+```rust
+// 不会 `panic!` 的整数除法。
+fn checked_division(dividend: i32, divisor: i32) -> Option<i32> {
+    if divisor == 0 {
+        // 失败表示成 `None` 变量
+        None
+    } else {
+        // 结果 Result 被装包成 `Some` 变量
+        Some(dividend / divisor)
+    }
+}
+
+// 此函数处理可能失败的除法
+fn try_division(dividend: i32, divisor: i32) {
+    // `Option` 值可以进行模式匹配，就和其他枚举一样
+    match checked_division(dividend, divisor) {
+        None => println!("{} / {} failed!", dividend, divisor),
+        Some(quotient) => {
+            println!("{} / {} = {}", dividend, divisor, quotient)
+        },
+    }
+}
+
+fn main() {
+    try_division(4, 2);
+    try_division(1, 0);
+
+    // 绑定 `None` 到一个变量需要类型标注
+    let none: Option<i32> = None;
+    let _equivalent_none = None::<i32>;
+
+    let optional_float = Some(0f32);
+
+    // 解包 `Some` 变量将展开解包后的值。
+    // （原文：Unwrapping a `Some` variant will extract the value wrapped.）
+    println!("{:?} unwraps to {:?}", optional_float, optional_float.unwrap());
+
+    // 解包 `None` 变量将会引发 `panic!`。
+    //thread 'main' panicked at 'called `Option::unwrap()` on a `None` value', src/main.rs:38:49
+    // stack backtrace:
+    println!("{:?} unwraps to {:?}", none, none.unwrap());
+}
+```
+
+
+
+```rust
+4 / 2 = 2
+1 / 0 failed!
+Some(0.0) unwraps to 0.0
+thread 'main' panicked at 'called `Option::unwrap()` on a `None` value', src/main.rs:38:49
+stack backtrace:
+```
+
+<font color=red size=5x>绑定 `None` 到一个变量需要类型标注</font>
+
+	-  `let none: Option<i32> = None;`
+	-  `let _equivalent_none = None::<i32>;`
+
+<font color=red size=5x>解包 `None` 变量将会引发 `panic!`,T.unwrap()</font>
+
+
+
+## 17.5结果 `Result`
+
+我们前面已经看到 `Option` 枚举可以用于函数可能失败的返回值，其中 `None` 可以返回以表明失败。但是有时要强调**为什么**一个操作会失败。为达成这点，我们提供了 `Result` 枚举。
+
+`Result<T, E>` 枚举拥有两个变量：
+
+- `Ok(value)` 表示操作成功，并装包操作返回的 `value`（`value` 拥有 `T` 类型）。
+- `Err(why)`，表示操作失败，并装包 `why`，它（能按照所希望的方式）解释了失败的原因（`why` 拥有 `E` 类型）。
+
+```rust
+mod checked {
+    // 我们想要捕获的数学“错误”
+    #[derive(Debug)]
+    pub enum MathError {
+        DivisionByZero,
+        NegativeLogarithm,
+        NegativeSquareRoot,
+    }
+
+    pub type MathResult = Result<f64, MathError>;
+
+    pub fn div(x: f64, y: f64) -> MathResult {
+        if y == 0.0 {
+            // 此操作将会失败，反而让我们返回失败的理由，并装包成 `Err`
+            Err(MathError::DivisionByZero)
+        } else {
+            // 此操作是有效的，返回装包成 `Ok` 的结果
+            Ok(x / y)
+        }
+    }
+
+    pub fn sqrt(x: f64) -> MathResult {
+        if x < 0.0 {
+            Err(MathError::NegativeSquareRoot)
+        } else {
+            //T.sqrt 平方根
+            Ok(x.sqrt())
+        }
+    }
+
+    pub fn ln(x: f64) -> MathResult {
+        //todo 浮点数是不能比较的 0.1 可能小于0.0
+        if x < 0.0 {
+            Err(MathError::NegativeLogarithm)
+        } else {
+            //T.ln()返回对数
+            println!("{}",x.ln());
+
+            Ok(x.ln())
+        }
+    }
+}
+
+// `op(x, y)` === `sqrt(ln(x / y))`
+fn op(x: f64, y: f64) -> f64 {
+    // 这是一个三层的匹配金字塔！
+    // （原文：This is a three level match pyramid!）
+    match checked::div(x, y) {
+        Err(why) => panic!("{:?}", why),
+        Ok(ratio) => match checked::ln(ratio) {
+            Err(why) => panic!("{:?}", why),
+            Ok(ln) => match checked::sqrt(ln) {
+                Err(why) => panic!("{:?}", why),
+                Ok(sqrt) => sqrt,
+            },
+        },
+    }
+}
+
+fn main() {
+    // 这会失败吗？
+    println!("{}", op(100.0, 10.0));
+}
+```
+
+
+
+```
+2.302585092994046
+1.5174271293851465
+```
+
+### 17.5.1 `?`
+
+使用匹配链接结果会得到极其繁琐的内容；幸运的是，`?` 运算符可以使事情再次变得干净漂亮。`?` 运算符用在返回值为 `Result` 的表式式后面，等同于这样一个匹配表式，其中 `Err(err)` 分支展开成提前（返回）`return Err(err)`，同时 `Ok(ok)` 分支展开成 `ok` 表达式。
+
+```rust
+mod checked {
+    #[derive(Debug)]
+    enum MathError {
+        DivisionByZero,
+        NegativeLogarithm,
+        NegativeSquareRoot,
+    }
+
+    type MathResult = Result<f64, MathError>;
+
+    fn div(x: f64, y: f64) -> MathResult {
+        if y == 0.0 {
+            Err(MathError::DivisionByZero)
+        } else {
+            Ok(x / y)
+        }
+    }
+
+    fn sqrt(x: f64) -> MathResult {
+        if x < 0.0 {
+            Err(MathError::NegativeSquareRoot)
+        } else {
+            Ok(x.sqrt())
+        }
+    }
+
+    fn ln(x: f64) -> MathResult {
+        if x < 0.0 {
+            Err(MathError::NegativeLogarithm)
+        } else {
+            Ok(x.ln())
+        }
+    }
+
+    // 中间函数
+    fn op_(x: f64, y: f64) -> MathResult {
+        // 如果 `div` “失败”了，那么 `DivisionByZero` 将被返回
+        let ratio = div(x, y)?;
+
+        // 如果 `ln` “失败”了，那么 `NegativeLogarithm` 将被返回
+        let ln = ln(ratio)?;
+
+        sqrt(ln)
+    }
+
+    pub fn op(x: f64, y: f64) {
+        match op_(x, y) {
+            Err(why) => panic!(match why {
+                MathError::NegativeLogarithm
+                => "logarithm of negative number",
+                MathError::DivisionByZero
+                => "division by zero",
+                MathError::NegativeSquareRoot
+                => "square root of negative number",
+            }),
+            Ok(value) => println!("{}", value),
+        }
+    }
+}
+
+fn main() {
+    checked::op(1.0, 10.0);
+}
+```
+
+
+
+```
+error: format argument must be a string literal
+  --> src/main.rs:48:32
+```
+
+
+
+## 17.6`panic!`
+
+`panic!` 宏可用于产生一个 panic （恐慌），并开始展开它的栈。在展开栈的同时，运行时将会释放该线程所**拥有**的所有资源，是通过调用对象的析构函数完成。
+
+因为我们正在处理的程序只有一个线程，`panic!` 将会引发程序上报 panic 消息并退出。
+
+```rust
+// 再次实现整型的除法（/）
+fn division(dividend: i32, divisor: i32) -> i32 {
+    if divisor == 0 {
+        // 除以一个 0 时会引发一个 panic
+        panic!("division by zero");
+    } else {
+        dividend / divisor
+    }
+}
+
+// `main` 任务
+fn main() {
+    // 堆分配的整数
+    let _x = Box::new(0i32);
+
+    // 此操作将会引发一个任务失败
+    division(3, 0);
+
+    println!("This point won't be reached!");
+
+    // `_x` 在此处将被销毁
+}
+```
+
+
+
+```
+$ rustc panic.rs && valgrind ./panic
+==4401== Memcheck, a memory error detector
+==4401== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al.
+==4401== Using Valgrind-3.10.0.SVN and LibVEX; rerun with -h for copyright info
+==4401== Command: ./panic
+==4401== 
+thread '<main>' panicked at 'division by zero', panic.rs:5
+==4401== 
+==4401== HEAP SUMMARY:
+==4401==     in use at exit: 0 bytes in 0 blocks
+==4401==   total heap usage: 18 allocs, 18 frees, 1,648 bytes allocated
+==4401== 
+==4401== All heap blocks were freed -- no leaks are possible
+==4401== 
+==4401== For counts of detected and suppressed errors, rerun with: -v
+==4401== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+```
+
+## 17.7 散列表 HashMap
+
+vector 通过整型索引来存储值，而 `HashMap` （散列表）通过键（key）来存储值。`HashMap` 的键可以是布尔型、整型、字符串，或任意实现了 `Eq` 和 `Hash` trait 的其他类型。在下一节将进一步介绍。
+
+和 vector 类似，`HashMap` 也是可增长的，但 HashMap 在空间多余时能够缩小自身（原文：HashMaps can also shrink themselves when they have excess space. ）。创建 HashMap，可以使用适当的初始化容器（starting capacity） `HashMap::with_capacity(unit)`，或者使用 `HashMap::new()` 来获得一个带有默认初始容器的 HashMap（推荐方式）。
+
+```rust
+use std::collections::HashMap;
+
+fn call(number: &str) -> &str {
+    match number {
+        "798-1364" => "We're sorry, the call cannot be completed as dialed.
+            Please hang up and try again.",
+        "645-7689" => "Hello, this is Mr. Awesome's Pizza. My name is Fred.
+            What can I get for you today?",
+        _ => {
+            println!("{}",number);
+            "Hi! Who is this again?"
+        }
+    }
+}
+
+fn main() {
+    let mut c = HashMap::with_capacity(2);
+    c.insert("Daniel", "798-1364");
+    c.insert("Daniel1", "798-1364");
+    c.insert("Daniel2", "798-1364");
+    c.insert("Daniel3", "798-1364");
+    c.insert("Daniel4", "798-1364");
+    println!("{:?}",c);
+
+    let mut contacts = HashMap::new();
+
+    contacts.insert("Daniel", "798-1364");
+    contacts.insert("Ashley", "645-7689");
+    contacts.insert("Katie", "435-8291");
+    contacts.insert("Robert", "956-1745");
+
+    // 接受一个引用并返回 Option<&V>
+    match contacts.get(&"Daniel") {
+        Some(&number) => println!("Calling Daniel: {}", call(number)),
+        _ => println!("Don't have Daniel's number."),
+    }
+
+    // 如果被插入的值为新内容，那么 `HashMap::insert()` 返回 `None`，
+    // 否则返回 `Some(value)`
+    contacts.insert("Daniel", "164-6743");
+
+    match contacts.get(&"Ashley") {
+        Some(&number) => println!("Calling Ashley: {}", call(number)),
+        _ => println!("Don't have Ashley's number."),
+    }
+
+    contacts.remove(&("Ashley"));
+
+    // `HashMap::iter()` 返回一个迭代器，该迭代器获得
+    // 任意顺序的 (&'a key, &'a value) 对。
+    // （原文：`HashMap::iter()` returns an iterator that yields
+    // (&'a key, &'a value) pairs in arbitrary order.）
+    for (contact, &number) in contacts.iter() {
+        println!("Calling {}: {}", contact, call(number));
+    }
+}
+
+```
+
+
+
+```rust
+{"Daniel3": "798-1364", "Daniel1": "798-1364", "Daniel2": "798-1364", "Daniel": "798-1364", "Daniel4": "798-1364"}
+Calling Daniel: We're sorry, the call cannot be completed as dialed.
+            Please hang up and try again.
+Calling Ashley: Hello, this is Mr. Awesome's Pizza. My name is Fred.
+            What can I get for you today?
+956-1745
+Calling Robert: Hi! Who is this again?
+164-6743
+Calling Daniel: Hi! Who is this again?
+435-8291
+Calling Katie: Hi! Who is this again?
+```
+
+
+
+17.7.1 更改或自定义关键字类型
+
+任何实现了 `Eq` 和 `Hash` trait 的类型都可以充当 `HashMap` 的键。这包括：
+
+- `bool` （当然这个用处不大，因为只有两个可能的键）
+- `int`，`unit`，以及所有这类型的变量
+- `String` 和 `&str`（友情提示：可以创建一个由 `String` 构成键的 `HashMap`，并以一个 `&str` 来调用 `.get()`）（原文：`String` and `&str` (protip: you can have a `HashMap` keyed by `String` and call `.get()` with an `&str`)）
+
+需要注意的是 `f32` 和 `f64` **没有**实现 `Hash`，很大程度上是由于[浮点精度误差](http://en.wikipedia.org/wiki/Floating_point#Accuracy_problems)（floating-point precision error）会使浮点类型作为散列映射键发生严重的错误。
+
+对于所有的集合类（collection），如果它们包含的类型都分别实现 `Eq` 和 `Hash`，那么这些集合类也都会实现 `Eq` 和 `Hash`。例如，若 `T` 实现了 `Hash`，则 `Vec<T>` 也会实现 `Hash`。
+
+对自定义类型可以轻松地实现 `Eq` 和 `Hash`，只需加上一行代码： `#[derive(PartialEq, Eq, Hash)]`。
+
+编译器将会完成余下的工作。如果你想控制更多的细节内容，你可以实现自己定制的 `Eq` 和/或 `Hash`。本指南不包含实现 `Hash` 的细节内容。
+
+为了玩玩怎么使用 `HashMap` 中的 `struct`，让我们试着做一个非常简易的登录系统：
+
+```
+
+```
