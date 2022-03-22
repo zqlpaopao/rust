@@ -1,4 +1,4 @@
-# 1、安装rust
+# 1. 安装rust
 
 ```
 curl https://sh.rustup.rs -sSf | sh
@@ -50,7 +50,7 @@ rustc 1.58.1 (db9d1b20b 2022-01-20)
 rustup self uninstall
 ```
 
-# 2、 rustup安装
+# 2.  rustup安装
 
 rustup 是rust官方的版本管理工具。应当作为安装 Rust 的首选。
 
@@ -62,7 +62,7 @@ rustup 是rust官方的版本管理工具。应当作为安装 Rust 的首选。
 rustup self uninstall
 ```
 
-# 3、安装vscode编译器
+# 3. 安装vscode编译器
 
 下载 VScode
 请打开官网 https://code.visualstudio.com/ 下载编辑器。
@@ -76,11 +76,11 @@ rustup self uninstall
 在编辑器中上部浮现出的输入框中，输入 ext install vscode-rust，会自动搜索可用的插件，搜索出来后，点击进行安装；使用VScode打开任意一个.rs文件，插件首次启动会自动引导用户完成配置。
 注:推荐使用RLS模式，即使用Rust Langular Server提供各项功能支持
 
-![image-20220214112618639](/Users/zhangqiuli24/Desktop/rust/readme/readme.assets/image-20220214112618639.png)
+![image-20220214112618639](readme.assets/image-20220214112618639.png)
 
-![image-20220214112931446](/Users/zhangqiuli24/Desktop/rust/readme/readme.assets/image-20220214112931446.png)
+![image-20220214112931446](readme.assets/image-20220214112931446.png)
 
-![image-20220214113058105](/Users/zhangqiuli24/Library/Application Support/typora-user-images/image-20220214113058105.png)
+![image-20220214113058105](readme.assets/image-20220214113058105.png)
 
 安装完毕
 
@@ -96,15 +96,15 @@ $ cargo run
 Hello, world!
 ```
 
-# 4、Cargo 教程
+# 4. Cargo 教程
 
-### Cargo 是什么
+## 4.1 Cargo 是什么
 
 Cargo 是 Rust 的构建系统和包管理器。
 
 Rust 开发者常用 Cargo 来管理 Rust 工程和获取工程所依赖的库。在上个教程中我们曾使用 cargo new greeting 命令创建了一个名为 greeting 的工程，Cargo 新建了一个名为 greeting 的文件夹并在里面部署了一个 Rust 工程最典型的文件结构。这个 greeting 文件夹就是工程本身。
 
-### Cargo 功能
+## 4.2 Cargo 功能
 
 Cargo 除了创建工程以外还具备构建（build）工程、运行（run）工程等一系列功能，构建和运行分别对应以下命令：
 
@@ -117,9 +117,9 @@ Cargo 还具有获取包、打包、高级构建等功能，详细使用方法�
 
 
 
-# 5、运行代码方式
+# 5. 运行代码方式
 
-## cargo
+## 5.1 cargo
 
 不用生成二进制文件的
 
@@ -130,7 +130,7 @@ cargo run 可直接运行
 cargo run # 编译和运行合在一起
 ```
 
-## rustc
+## 5.2 rustc
 
 生成二进制文件的
 
@@ -139,7 +139,7 @@ rustc helloworld.rs
 rustc helloworld.rs -O # 也可以选择优化编译
 ```
 
-# 使用cargo创建项目
+## 5.3 使用cargo创建项目
 
 * 创建项目 hellorust
 
@@ -217,7 +217,7 @@ ps: cargo run —release # 同上，区别是是优化编译的
 
 
 
-# 6、数据类型
+# 6. 数据类型
 
 ### 整数型（Integer）
 
@@ -246,7 +246,7 @@ isize 和 usize 两种整数类型是用来衡量数据大小的，它们的位�
 
 很显然，有的整数中间存在一个下划线，这种设计可以让人们在输入一个很大的数字时更容易判断数字的值大概是多少。
 
-### 浮点数型（Floating-Point）
+## 6.1 浮点数型（Floating-Point）
 
 Rust 与其它语言一样支持 32 位浮点数（f32）和 64 位浮点数（f64）。默认情况下，64.0 将表示 64 位浮点数，因为现代计算机处理器对两种浮点数计算的速度几乎相同，但 64 位浮点数精度更高。
 
@@ -259,11 +259,11 @@ fn main() {
 }
 ```
 
-### 布尔型
+## 6.2 布尔型
 
 布尔型用 bool 表示，值只能为 true 或 false。
 
-### 字符型
+## 6.3 字符型
 
 字符型用 char 表示。
 
@@ -285,7 +285,7 @@ println!("{}",strings);
 
 
 
-### 字符串类型
+## 6.4 字符串类型
 
 最底层的是不定长类型`str`，更常用的是字符串切片`&str`和堆分配字符串`String`
 
@@ -318,7 +318,7 @@ println!("{}",to_str);
 
 
 
-### 元组
+## 6.5 元组
 
 具有固定大小的有序列表，每个元素都有自己的类型，通过解构或者索引来获得每个元素的值。
 
@@ -343,7 +343,7 @@ println!("{},{},{}",x,y,z)
 500,6.4,1
 ```
 
-### 数组
+## 6.6 数组
 
 具有固定大小，并且元素都是同种类型，可表示为`[T; N]`。
 
@@ -387,7 +387,7 @@ bbb
 4
 ```
 
-### 切片
+## 6.7 切片
 
 引用一个数组的部分数据并且不需要拷贝，可表示为`&[T]`。
 
@@ -415,7 +415,7 @@ println!("{}",ten_zeros[0]);
 9
 ```
 
-### 指针和引用
+## 6.8 指针和引用
 
 * 解除引用使用  `*`
 * 构析使用 `&`, `ref`, 和 `ref mut`
@@ -455,7 +455,7 @@ hello
 
 
 
-### 函数
+## 6.9 函数
 
 ：具有函数类型的变量实质上是一个函数指针
 
@@ -472,11 +472,11 @@ println!("{}",bar(5));
 
 
 
-### 元类型
+## 6.10 元类型
 
 ：即`()`，其唯一的值也是`()`
 
-### <mark>总结</mark>
+## 6.11  <mark>总结</mark>
 
 有几点是需要特别注意的：
 
@@ -504,9 +504,9 @@ type Point = (u8, u8);
 
 
 
-### 数组、动态数组、字符串
+## 6.12 数组、动态数组、字符串
 
-#### 数组 array
+### 6.12.1 数组 array
 
 Rust 使用数组存储相同类型的数据集。  
 `[T; N]`表示一个拥有 T 类型，N 个元素的数组。数组的大小是固定。
@@ -532,7 +532,7 @@ fn main() {
 
 
 
-### 动态数组 Vec
+### 6.12.2 动态数组 Vec
 
 动态数组是一种基于堆内存申请的连续动态数据类型，拥有 O(1) 时间复杂度的索引、压入（push）、弹出（pop)。
 
@@ -601,11 +601,11 @@ Some(
 2
 ```
 
-### 字符串
+## 6.13字符串
 
 Rust 里面有两种字符串类型。`String` 和 `str`。
 
-#### &str
+### 6.13.1 &str
 
 `str` 类型基本上不怎么使用，通常使用 `&str` 类型，它其实是 `[u8]` 类型的切片形式 `&[u8]`。这是一种固定大小的字符串类型。  
 常见的的字符串字面值就是 `&'static str` 类型。这是一种带有 `'static` 生命周期的 &str 类型。
@@ -626,7 +626,7 @@ println!("{}",hello1);
 
 
 
-#### String
+### 6.13.2 String
 
 `String` 是一个带有的 `vec:Vec<u8>` 成员的结构体，你可以理解为 `str` 类型的动态形式。  
 它们的关系相当于 `[T]` 和 `Vec<T>` 的关系。  
@@ -660,7 +660,7 @@ fn main() {
 
 
 
-### static
+### 6.13.3 static
 
 <font color=red>`'static` 生命周期是可能的生命周期中最长的，它会在整个程序运行的时期中 存在。`<mark>'static` 生命周期也可被强制转换成一个更短的生命周期。有两种方式使变量 拥有 `'static` 生命</mark>周期，它们都把数据保存在可执行文件的只读内存区：</font>
 
@@ -705,7 +705,7 @@ fn main() {
 
 ```
 
-# 7、结构体
+# 7. 结构体
 
 - 结构体 (struct) 是一种记录类型，所包含的每个域 (field) 都有一个名称。  
 
@@ -759,11 +759,11 @@ fn main() {
 }
 ```
 
-# 8、Rust 结构体
+# 8. Rust 结构体
 
 Rust 中的结构体（Struct）与元组（Tuple）都可以将若干个类型不一定相同的数据捆绑在一起形成整体，但结构体的每个成员和其本身都有一个名字，这样访问它成员的时候就不用记住下标了。元组常用于非定义的多值传递，而结构体用于规范常用的数据结构。结构体的每个成员叫做"字段"。
 
-## 结构体定义
+## 8.1 结构体定义
 
 这是一个结构体定义：
 
@@ -780,11 +780,11 @@ struct Site {
 
 注意：如果你常用 C/C++，请记住在 Rust 里 struct 语句仅用来定义，不能声明实例，结尾不需要 ; 符号，而且每个字段定义之后用 , 分隔。
 
-## 结构体实例
+## 8.2 结构体实例
 
 Rust 很多地方受 JavaScript 影响，在实例化结构体的时候用 JSON 对象的 key: value 语法来实现定义：
 
-## 实例
+实例
 
 ```
 let runoob = Site {
@@ -812,7 +812,7 @@ let runoob = Site {
 
 如果正在实例化的结构体有字段名称和现存变量名称一样的，可以简化书写：
 
-## 实例
+实例
 
 ```
 let domain = String::from("www.runoob.com");
@@ -841,7 +841,7 @@ let site = Site {
 
 注意：..runoob 后面不可以有逗号。这种语法不允许一成不变的复制另一个结构体实例，意思就是说至少重新设定一个字段的值才能引用其他实例的值。
 
-### 元组结构体
+## 8.3 元组结构体
 
 有一种更简单的定义和使用结构体的方式：**元组结构体**。
 
@@ -861,7 +861,7 @@ let origin = Point(0.0, 0.0);
 
 "颜色"和"点坐标"是常用的两种数据类型，但如果实例化时写个大括号再写上两个名字就为了可读性牺牲了便捷性，Rust 不会遗留这个问题。元组结构体对象的使用方式和元组一样，通过 . 和下标来进行访问：
 
-## 实例
+实例
 
 ```
 fn main() {
@@ -880,7 +880,7 @@ fn main() {
 
 black = (0, 0, 0) origin = (0, 0)
 
-## 结构体所有权
+## 8.4 结构体所有权
 
 结构体必须掌握字段值所有权，因为结构体失效的时候会释放所有字段。
 
@@ -890,11 +890,11 @@ black = (0, 0, 0) origin = (0, 0)
 
 但现在还难以说明"生命周期"概念，所以只能在后面章节说明。
 
-### 输出结构体
+### 8.4.1 输出结构体
 
 调试中，完整地显示出一个结构体实例是非常有用的。但如果我们手动的书写一个格式会非常的不方便。所以 Rust 提供了一个方便地输出一整个结构体的方法：
 
-## 实例
+实例
 
 ```
 #[derive(Debug)]
@@ -932,7 +932,7 @@ rect1 is Rectangle {
 
 
 
-### 结构体方法
+## 8.5 结构体方法
 
 方法（Method）和函数（Function）类似，只不过它是用来操作结构体实例的。
 
@@ -944,7 +944,7 @@ Rust 语言不是面向对象的，从它所有权机制的创新可以看出这
 
 计算一个矩形的面积：
 
-## 实例
+实例
 
 ```
 struct Rectangle {
@@ -976,7 +976,7 @@ rect1's area is 1500
 
 一个多参数的例子：
 
-## 实例
+实例
 
 ```
 struct Rectangle {
@@ -1012,7 +1012,7 @@ false
 
 ---
 
-## 结构体关联函数
+## 8.6 结构体关联函数
 
 之所以"结构体方法"不叫"结构体函数"是因为"函数"这个名字留给了这种函数：它在 impl 块中却没有 &self 参数。
 
@@ -1020,7 +1020,7 @@ false
 
 一直使用的 String::from 函数就是一个"关联函数"。
 
-## 实例
+实例
 
 ```
 #[derive(Debug)]
@@ -1065,7 +1065,7 @@ struct UnitStruct;
 
 
 
-# 9、enum枚举类
+# 9. enum枚举类
 
 ```
 #[derive(Debug)]
@@ -1268,7 +1268,7 @@ fn main() {
 
 ```
 
-# 10、Option 枚举类
+# 10. Option 枚举类
 
 Option 是 Rust 标准库中的枚举类，这个类用于填补 Rust 不支持 null 引用的空白。
 
@@ -1419,7 +1419,7 @@ fn main() {
 
 ```
 
-# 常量
+# 11. 常量
 
 Rust 有两种常量，可以在任意作用域声明，包括全局作用域。这两种常量都要显式地标注：
 
@@ -1428,7 +1428,7 @@ Rust 有两种常量，可以在任意作用域声明，包括全局作用域。
 
 有个特例就是 `"string"` 原始类型。可以给它直接赋一个不可改变的 `static` 变量，是因为它的 类型标记：`&'static str` 包含了生命周期 `'static`。其他的引用类型都必须特别注明从而拥有 `'static` 生命周期。这似乎是无关紧要的，因为所需的显式标记会隐藏差异（This may seem minor though because the required explicit annotation hides the distinction.）。
 
-## const
+## 11.1 const
 
 对于const，常量贯穿于整个程序的生命周期。更具体的，Rust 中的常量并没有固定的内存地址。这是因为实际上它们会被内联到用到它们的地方。为此对同一常量的引用并不能保证引用到相同的内存地址。
 
@@ -1439,7 +1439,7 @@ const N: i32 = 5;    //定义一个整型常量
 
 一个常量可以理解为是一个C语言中的#define，它有元数据开销但无运行时开销。
 
-## static
+## 11.2 static
 
 对于static，Rust以静态量的方式提供了类似“全局变量”的功能。它们与常量类似，不过静态量在使用时并不内联。这意味着对每一个值只有一个实例，并且位于内存中的固定位置。
 
@@ -1460,8 +1460,7 @@ unsafe {
 
 如果想赋予一个非常量表达式，可以参考用第三方库lazy_static（A macro for declaring lazily evaluated statics in Rust.）解决。
 
-
-## 区别
+## 11.3 区别
 
 * <font color=red>定义方式类型，一个使用 static，一个使用 const；</font>
 
@@ -1512,7 +1511,7 @@ unsafe，Go 程序员应该很熟悉。在 Go 中一般也建议别用它。
 
 
 
-## 实例
+## 11.4 实例
 
 ```
 // 在所有的作用域外声明全局变量。
@@ -1564,7 +1563,7 @@ The threshold is 10
 N: 6
 ```
 
-# 变量绑定
+# 12. 变量绑定
 
 Rust 通过静态类型确保类型安全。变量绑定可以在声明变量时标注类型。不过在多数情况下，编译器能够 从字面内容推导出变量的类型，大大减少了标注类型的负担。
 
@@ -1602,7 +1601,7 @@ Meet the unit value: ()
 
 
 
-## 可变变量
+## 12.1 可变变量
 
 变量绑定默认是不可变的，但加上 `mut` 修饰语后变量就可以改变。
 
@@ -1635,7 +1634,7 @@ After mutation: 2
 
 
 
-## 作用域和隐藏
+## 12.2 作用域和隐藏
 
 变量绑定有一个作用域，并且限定在一个**代码块**（block）中存活（live）。代码块是一个被 `{}` 包围的 语句集合。另外也允许[变量隐藏](https://en.wikipedia.org/wiki/Variable_shadowing)。
 
@@ -1685,7 +1684,7 @@ outer long: a
 
 
 
-## 变量先声明
+## 12.3 变量先声明
 
 Rust 语言可以先声明变量绑定，后面才将它们初始化。但是这种情况用得很少，因为这样很可能导致使用未 初始的变量。
 
@@ -1727,7 +1726,7 @@ a binding: 4
 another binding: 1
 ```
 
-# 类型转换
+# 13. 类型转换
 
 Rust 在基本类型之间没有提供隐式类型转换（强制类型转换）（implicit type conversion，coercion ）。不过使用 `as` 关键字进行显式类型转换（explict type conversion，casting）。
 
@@ -8447,7 +8446,9 @@ Calling Katie: Hi! Who is this again?
 
 
 
-17.7.1 更改或自定义关键字类型
+
+
+### 17.7.1 更改或自定义关键字类型
 
 任何实现了 `Eq` 和 `Hash` trait 的类型都可以充当 `HashMap` 的键。这包括：
 
@@ -8465,6 +8466,980 @@ Calling Katie: Hi! Who is this again?
 
 为了玩玩怎么使用 `HashMap` 中的 `struct`，让我们试着做一个非常简易的登录系统：
 
+```rust
+use std::collections::HashMap;
+
+fn call(number: &str) -> &str {
+    match number {
+        "798-1364" => "We're sorry, the call cannot be completed as dialed.
+            Please hang up and try again.",
+        "645-7689" => "Hello, this is Mr. Awesome's Pizza. My name is Fred.
+            What can I get for you today?",
+        _ => "Hi! Who is this again?"
+    }
+}
+
+fn main() {
+    let mut contacts = HashMap::new();
+
+    contacts.insert("Daniel", "798-1364");
+    contacts.insert("Ashley", "645-7689");
+    contacts.insert("Katie", "435-8291");
+    contacts.insert("Robert", "956-1745");
+
+    // 接受一个引用并返回 Option<&V>
+    match contacts.get(&"Daniel") {
+        Some(&number) => println!("Calling Daniel: {}", call(number)),
+        _ => println!("Don't have Daniel's number."),
+    }
+
+    // 如果被插入的值为新内容，那么 `HashMap::insert()` 返回 `None`，
+    // 否则返回 `Some(value)`
+    contacts.insert("Daniel", "164-6743");
+
+    match contacts.get(&"Ashley") {
+        Some(&number) => println!("Calling Ashley: {}", call(number)),
+        _ => println!("Don't have Ashley's number."),
+    }
+
+    contacts.remove(&("Ashley"));
+
+    // `HashMap::iter()` 返回一个迭代器，该迭代器获得
+    // 任意顺序的 (&'a key, &'a value) 对。
+    // （原文：`HashMap::iter()` returns an iterator that yields
+    // (&'a key, &'a value) pairs in arbitrary order.）
+    for (contact, &number) in contacts.iter() {
+        println!("Calling {}: {}", contact, call(number));
+    }
+}
 ```
 
+
+
 ```
+Calling Daniel: We're sorry, the call cannot be completed as dialed.
+            Please hang up and try again.
+Calling Ashley: Hello, this is Mr. Awesome's Pizza. My name is Fred.
+            What can I get for you today?
+Calling Katie: Hi! Who is this again?
+Calling Daniel: Hi! Who is this again?
+Calling Robert: Hi! Who is this again?
+```
+
+<font color=red size=5x>对自定义类型可以轻松地实现 `Eq` 和 `Hash`，只需加上一行代码： `#[derive(PartialEq, Eq, Hash)]`。</font>
+
+了解更多关于映射（map）和散列映射（hash map）（通常也称作散列表，哈希表）的实现原理，可以查看 Wikipedia 的词条[散列表](http://en.wikipedia.org/wiki/Hash_table)。
+
+### 17.7.2 散列集 HashSet
+
+考虑 `HashSet` 作为一个 `HashMap`，在此处我们只关心键（`HashSet<T>` 实际上只是一个包围 `HashMap<T, ()>` 的装包（wrapper））。（原文：Consider a `HashSet` as a `HashMap` where we just care about the keys (`HashSet<T>` is, in actuality, just a wrapper around `HashMap<T, ()>`).）
+
+“关键点是什么呢？”你可能会这样问。“我可以将键只存储到一个 `Vec` 中。”
+
+`HashSet` 的独特之处在于，它保证了不会拥有重复的元素。这是任何集合组合遵循的规定。`HashSet` 只是一个实现。（参见：[`BTreeSet`](http://doc.rust-lang.org/std/collections/struct.BTreeSet.html)）
+
+如果插入的值已经存在于 `HashSet` 中（也就是，新值等于已存在的值，并且拥有相同的散列值），那么新值将会替换旧的值。
+
+对于从来不多次保存同一事物，以及判断是否已经得到某个事物的情况，这是相当棒的。（原文：This is great for when you never want more than one of something, or when you want to know if you’ve already got something.）
+
+不过集合（set）可以做更多的事。
+
+集合拥有 4 种基本操作（下面的调用全部都返回一个迭代器）：
+
+- `union`（并集）：获得两个集合中的所有元素（不含重复值）。
+- `difference`（差集）：获取落在第一个集合而不在第二集合的所有元素。
+- `intersection`（交集）：获取同时属于两个集合的所有元素。
+- `symmetric_difference`（对称差）：获取所有只属于其中一个元素的集合，但不同属于两个集合的所有元素。
+
+在下面的例子中尝试使用这些操作。
+
+```rust
+use std::collections::HashSet;
+
+fn main() {
+    //iter()、iter_mut() 和 into_iter()，分别用于迭代 &T（引用）、&mut T（可变引用）和 T（值）。
+    //collect 迭代器
+    let mut a: HashSet<i32> = vec!(1i32, 2, 3).into_iter().collect();
+    let mut b: HashSet<i32> = vec!(2i32, 3, 4).into_iter().collect();
+
+    assert!(a.insert(4));
+    assert!(a.contains(&4));
+
+    // 如果值已经存在，那么 `HashSet::insert()` 返回 false。
+    // assert!(b.insert(4), "Value 4 is already in set B!");
+    // 改正 ^ 将此行注释掉。
+
+    b.insert(5);
+
+    // 若一个组合的元素类型实现了 `Debug`，那么该组合也就实现了 `Debug`。
+    // 这通常将元素打印成这样的格式 `[dlem1, elem2, ...]
+    println!("A: {:?}", a);
+    println!("B: {:?}", b);
+
+    // 乱序打印 [1, 2, 3, 4, 5]。//交集
+    println!("Union: {:?}", a.union(&b).collect::<Vec<&i32>>());
+
+    // 这将会打印出 [1]-差级
+    println!("Difference: {:?}", a.difference(&b).collect::<Vec<&i32>>());
+
+    // 乱序打印 [2, 3, 4]。-并集
+    println!("Intersection: {:?}", a.intersection(&b).collect::<Vec<&i32>>());
+
+    // 打印 [1, 5]--全部的差集
+    println!("Symmetric Difference: {:?}",
+             a.symmetric_difference(&b).collect::<Vec<&i32>>());
+}
+```
+
+
+
+```
+A: {2, 3, 4, 1}
+B: {3, 2, 4, 5}
+Union: [2, 3, 4, 1, 5]
+Difference: [1]
+Intersection: [2, 3, 4]
+Symmetric Difference: [1, 5]
+```
+
+
+
+# 18. 标准库更多介绍
+
+标准库也提供了很多其他类型来支持某些功能，例如：
+
+- 线程（Threads）
+- 信道（Channels）
+- 文件输入输出（File I/O）
+
+这些内容在[原生类型](https://llever.com/rust-by-example-cn/primitives.html)之外进行了有效扩充。
+
+## 18.1 线程
+
+Rust 通过 `spawn` 函数提供了创建本地操作系统（native OS）线程的机制，该函数的参数是一个转移闭包（moving closure）。
+
+```rust
+use std::thread;
+
+static NTHREADS: i32 = 10;
+
+// 这是主（`main`）线程
+fn main() {
+    // 提供一个 vector 来存放所创建的子线程（children）。
+    let mut children = vec![];
+
+    for i in 0..NTHREADS {
+        // 启动（spin up）另一个线程
+        children.push(thread::spawn(move || {
+            println!("this is thread number {}", i)
+        }));
+    }
+
+    for child in children {
+        // 等待线程到结束。返回一个结果。
+        let _ = child.join();
+    }
+}
+```
+
+这些线程由操作系统调度（schedule）。[](https://llever.com/rust-by-example-cn/std_misc.html#a参见)
+
+```
+this is thread number 0
+this is thread number 4
+this is thread number 6
+this is thread number 5
+this is thread number 2
+this is thread number 7
+this is thread number 1
+this is thread number 3
+this is thread number 8
+this is thread number 9
+```
+
+## 18.2 通道
+
+Rust 针对线程之间的通信提供了异步的通道（`channel`）。通道允许两个端点之间信息的单向流动：`Sender`（发送端） 和 `Receiver`（接收端）。
+
+```rust
+use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc;
+use std::thread;
+
+static NTHREADS: i32 = 3;
+
+fn main() {
+    // 通道有两个端点：`Sender<T>` 和 `Receiver<T>`，其中 `T` 是要发送
+    // 消息的类型（类型标注是可有可无的）
+    let (tx, rx): (Sender<i32>, Receiver<i32>) = mpsc::channel();
+
+    for id in 0..NTHREADS {
+        // sender 发送端可被复制
+        let thread_tx = tx.clone();
+
+        // 每个线程都将通过通道来发送它的 id
+        thread::spawn(move || {
+            // 此线程取得 `thread_tx` 所有权
+            // 每个线程都在通道中排队列出消息
+            // （原文：The thread takes ownership over `thread_tx`
+            // Each thread queues a message in the channel）
+            thread_tx.send(id).unwrap();
+
+            // 发送是一个非阻塞操作，线程将在发送完消息后继续进行
+            println!("thread {} finished", id);
+        });
+    }
+
+    // 所有消息都在此处被收集
+    let mut ids = Vec::with_capacity(NTHREADS as usize);
+    for _ in 0..NTHREADS {
+        // `recv` 方法从通道中拿到一个消息
+        // 若无可用消息的话，`recv` 将阻止当前线程
+        ids.push(rx.recv());
+    }
+
+    // 显示已发送消息的次序
+    println!("{:?}", ids);
+}
+```
+
+
+
+```
+thread 0 finished
+thread 2 finished
+thread 1 finished
+[Ok(0), Ok(2), Ok(1)]
+```
+
+
+
+## 18.3 路径 Path
+
+`Path` 结构体代表了底层文件系统的文件路径。`Path` 分为两种：`posix::Path`，针对类 UNIX 系统；以及 `windows::Path`，针对 Windows。预处理会导入适合特定平台的 `Path` 变量（原文：The prelude exports the appropriate platform-specific `Path` variant.）。
+
+`Path` 可从多种类型创建，几乎所有实现了 `BytesContainer` trait 的类型都可以，比如 string，并提供了几种方法从路径指向的文件/目录中获取信息。（原文：A `Path` can be created from almost any type that implements the `BytesContainer` trait, like a string, and provides several methods to get information from the file/directory the path points to.）
+
+注意 `Path` 在内部并没有表示为一个 UTF-8 字符串，而是存储为若干字节（`Vec<u8>`）的 vector。因此，将 Path 转化成 &str 并非零开销（free），且可能失败（返回一个 Option）。
+
+```rust
+use std::path::Path;
+
+fn main() {
+    // 从 `&'static str` 创建一个 `Path`
+    let path = Path::new(".");
+
+    // `display` 方法返回一个可显示（showable）的结构体
+    let display = path.display();
+    println!("{:?}",display);
+    // `join` 使用操作系统的特定分隔符来合并路径，并返回新的路径
+    let new_path = path.join("a").join("b");
+
+    // 将路径转换成一个字符串 slice
+    match new_path.to_str() {
+        None => panic!("new path is not a valid UTF-8 sequence"),
+        Some(s) => println!("new path is {}", s),
+    }
+}
+```
+
+
+
+```
+"."
+new path is ./a/b
+```
+
+
+
+## 18.4 文件输入输出 I/O
+
+`File` 结构体表示一个被打开的文件（它装包了一个文件描述符），并赋予了针对底层文件的读和/或写能力。（原文：The `File` struct represents a file that has been opened (it wraps a file descriptor), and gives read and/or write access to the underlying file.）
+
+由于在进行文件 I/O（输入/输出）操作时很多情形都可能出现错误，因此所有的 `File` 方法都返回 `io::Result<T>` 类型，这是 `Result<T, io::Error>` 的别名。
+
+这使得所有 I/O 操作的失败都变成**显式**内容。借助这点，程序员可以看到所有的失败路径，并鼓励主动去处理这些情形。
+
+### 18.4.1 打开文件 `open`
+
+`open` 静态方法能够以只读模式（read-only mode）打开一个文件。
+
+`File` 拥有一个资源，文件描述符（file descriptor），以及在文件丢弃时管理好关闭文件的操作。（原文：A `File` owns a resource, the file descriptor and takes care of closing the file when it is `drop`ed.）
+
+```rust
+use std::error::Error;
+use std::fs::File;
+use std::io::prelude::*;
+use std::path::Path;
+
+fn main() {
+    // 给所需的文件创建一个路径
+    let path = Path::new("hello.txt");
+    let display = path.display();
+
+    // 以只读方式打开路径，返回 `io::Result<File>`
+    let mut file = match File::open(&path) {
+        // `io::Error` 的 `description` 方法返回一个描述错误的字符串。
+        Err(why) => panic!("couldn't open {}: {}", display,
+                           why.description()),
+        Ok(file) => file,
+    };
+
+    // 读取文件内容到一个字符串，返回 `io::Result<usize>`
+    let mut s = String::new();
+    match file.read_to_string(&mut s) {
+        Err(why) => panic!("couldn't read {}: {}", display,
+                           why.description().to_string()),
+        Ok(_) => print!("{} contains:\n{}", display, s),
+    }
+
+    // `file` 离开作用域，并且 `hello.txt` 文件将被关闭。
+}
+```
+
+
+
+```
+hello.txt contains:
+Hello World
+```
+
+### 18.4.2 创建文件 `create`
+
+`create` 静态方法以只写模式（write-only mode）打开一个文件。若文件已经存在，则旧内容将被销毁。否则，将创建一个新文件。
+
+```rust
+static LOREM_IPSUM: &'static str =
+    "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
+cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
+proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+";
+
+use std::io::prelude::*;
+use std::fs::File;
+use std::path::Path;
+
+fn main() {
+    let path = Path::new("./lorem_ipsum.txt");
+    let display = path.display();
+
+    // 以只写模式打开文件，返回 `io::Result<File>`
+    let mut file = match File::create(&path) {
+        Err(why) => panic!("couldn't create {}: {}",
+                           display,
+                           why.to_string()),
+        Ok(file) => file,
+    };
+
+    // 将 `LOREM_IPSUM` 字符串写进 `file`，返回 `io::Result<()>`
+    match file.write_all(LOREM_IPSUM.as_bytes()) {
+        Err(why) => {
+            panic!("couldn't write to {}: {}", display,
+                   why.to_string())
+        },
+        Ok(_) => println!("successfully wrote to {}", display),
+    }
+}
+```
+
+## 18.5 子进程
+
+`process::Output` 结构体表示已结束的子进程（child process）的输出，而 `process::Command` 结构体是一个进程创建者（process builder）。
+
+```rust
+use std::process::Command;
+
+fn main() {
+    let output = Command::new("rustc")
+        .arg("--version")
+        .output().unwrap_or_else(|e| {
+        panic!("failed to execute process: {}", e)
+    });
+
+    if output.status.success() {
+        let s = String::from_utf8_lossy(&output.stdout);
+
+        print!("rustc succeeded and stdout was:\n{}", s);
+    } else {
+        let s = String::from_utf8_lossy(&output.stderr);
+
+        print!("rustc failed and stderr was:\n{}", s);
+    }
+}
+```
+
+
+
+```
+rustc succeeded and stdout was:
+rustc 1.58.1 (db9d1b20b 2022-01-20)
+```
+
+
+
+### 18.5.1 [管道](https://llever.com/rust-by-example-cn/std_misc/process/pipe.html#a管道)
+
+`Process` 结构体代表了一个正在运行的子进程，并公开了`stdin`（标准输入），`stdout`（标准输出） 和 `stderr`（标准错误） 句柄，通过管道和底层的进程交互。（原文：The `Process` struct represents a running child process, and exposes the `stdin`, `stdout` and `stderr` handles for interaction with the underlying process via pipes.）
+
+```rust
+use std::error::Error;
+use std::io::prelude::*;
+use std::process::{Command, Stdio};
+
+static PANGRAM: &'static str =
+    "the quick brown fox jumped over the lazy dog\n";
+
+fn main() {
+    // 触发 `wc` 命令（原文：Spawn the `wc` command）
+    let process = match Command::new("wc")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn() {
+        Err(why) => panic!("couldn't spawn wc: {}", why.to_string()),
+        Ok(process) => process,
+    };
+
+    // 将字符串写入 `wc` 的 `stdin`。
+    //
+    // `stdin` 拥有 `Option<ChildStdin>` 类型，不过既然我们已经知道这个实例
+    // 只能拥有一个，那么我们可以直接解包（`unwrap`）它。
+    // （原文：`stdin` has type `Option<ChildStdin>`, but since we know this instance
+    // must have one, we can directly `unwrap` it.）
+    match process.stdin.unwrap().write_all(PANGRAM.as_bytes()) {
+        Err(why) => panic!("couldn't write to wc stdin: {}",
+                           why.to_string()),
+        Ok(_) => println!("sent pangram to wc"),
+    }
+
+    // 因为 `stdin` 在上面调用后就不再存活，所以它被销毁了，且管道被关闭。
+    //
+    // 这点非常重要，否则 `wc` 不会开始处理我们刚刚发送的输入。
+
+    // `stdout` 域也拥有 `Option<ChildStdout>` 类型，所以必需解包。
+    let mut s = String::new();
+    match process.stdout.unwrap().read_to_string(&mut s) {
+        Err(why) => panic!("couldn't read wc stdout: {}",
+                           why.description()),
+        Ok(_) => print!("wc responded with:\n{}", s),
+    }
+    println!("{}",s)
+}
+```
+
+
+
+```
+sent pangram to wc
+wc responded with:
+       1       9      45
+       1       9      45
+```
+
+### 18.5.2 等待 [Wait](https://llever.com/rust-by-example-cn/std_misc/process/wait.html#a等待-wait)
+
+如果你想等待 `process::Child` 完成，就必须调用 `Child::wait`，这会返回一个 `process::ExitStatus`。
+
+```rust
+use std::process::Command;
+
+fn main() {
+    let mut child = Command::new("sleep").arg("5").spawn().unwrap();
+    let _result = child.wait().unwrap();
+
+    println!("reached end of main");
+}
+```
+
+
+
+```
+reached end of main
+```
+
+## 18.6 [文件系统操作](https://llever.com/rust-by-example-cn/std_misc/fs.html#a文件系统操作)
+
+`std::io::fs` 模块包含几个处理文件系统的函数。
+
+```rust
+use std::fs;
+use std::fs::{File, OpenOptions};
+use std::io;
+use std::io::prelude::*;
+use std::os::unix;
+use std::path::Path;
+
+// `% cat path` 的简单实现
+fn cat(path: &Path) -> io::Result<String> {
+    let mut f = File::open(path)?;
+    let mut s = String::new();
+    match f.read_to_string(&mut s) {
+        Ok(_) => Ok(s),
+        Err(e) => Err(e),
+    }
+}
+
+// `% echo s > path` 的简单实现
+fn echo(s: &str, path: &Path) -> io::Result<()> {
+    let mut f = File::create(path)?;
+
+    f.write_all(s.as_bytes())
+}
+
+// `% touch path`（忽略已存在文件）的简单实现
+fn touch(path: &Path) -> io::Result<()> {
+    match OpenOptions::new().create(true).write(true).open(path) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(e),
+    }
+}
+
+fn main() {
+    println!("`mkdir a`");
+    // 创建一个目录，返回 `io::Result<()>`
+    match fs::create_dir("a") {
+        Err(why) => println!("! {:?}", why.kind()),
+        Ok(_) => {},
+    }
+
+    println!("`echo hello > a/b.txt`");
+    // 前面的匹配可以用 `unwrap_or_else` 方法简化
+    echo("hello", &Path::new("a/b.txt")).unwrap_or_else(|why| {
+        println!("! {:?}", why.kind());
+    });
+
+    println!("`mkdir -p a/c/d`");
+    // 递归创建一个目录，返回 `io::Result<()>`
+    fs::create_dir_all("a/c/d").unwrap_or_else(|why| {
+        println!("! {:?}", why.kind());
+    });
+
+    println!("`touch a/c/e.txt`");
+    touch(&Path::new("a/c/e.txt")).unwrap_or_else(|why| {
+        println!("! {:?}", why.kind());
+    });
+
+    println!("`ln -s ../b.txt a/c/b.txt`");
+    // 创建一个符号链接，返回 `io::Resutl<()>`
+    if cfg!(target_family = "unix") {
+        unix::fs::symlink("../b.txt", "a/c/b.txt").unwrap_or_else(|why| {
+            println!("! {:?}", why.kind());
+        });
+    }
+
+    println!("`cat a/c/b.txt`");
+    match cat(&Path::new("a/c/b.txt")) {
+        Err(why) => println!("! {:?}", why.kind()),
+        Ok(s) => println!("> {}", s),
+    }
+
+    println!("`ls a`");
+    // 读取目录的内容，返回 `io::Result<Vec<Path>>`
+    match fs::read_dir("a") {
+        Err(why) => println!("! {:?}", why.kind()),
+        Ok(paths) => for path in paths {
+            println!("> {:?}", path.unwrap().path());
+        },
+    }
+
+    println!("`rm a/c/e.txt`");
+    // 删除一个文件，返回 `io::Result<()>`
+    fs::remove_file("a/c/e.txt").unwrap_or_else(|why| {
+        println!("! {:?}", why.kind());
+    });
+
+    println!("`rmdir a/c/d`");
+    // 移除一个空目录，返回 `io::Result<()>`
+    fs::remove_dir("a/c/d").unwrap_or_else(|why| {
+        println!("! {:?}", why.kind());
+    });
+}
+```
+
+
+
+```
+`mkdir a`
+`echo hello > a/b.txt`
+`mkdir -p a/c/d`
+`touch a/c/e.txt`
+`ln -s ../b.txt a/c/b.txt`
+`cat a/c/b.txt`
+> hello
+`ls a`
+> "a/b.txt"
+> "a/c"
+`rm a/c/e.txt`
+`rmdir a/c/d`
+```
+
+
+
+```
+$ tree a                                 
+a
+├── b.txt
+└── c
+    └── b.txt -> ../b.txt
+
+1 directory, 2 files
+```
+
+另一种定义 `cat` 函数的方式是使用 `?` 标记：
+
+```rust
+fn cat(path: &Path) -> io::Result<String> {
+    let mut f = File::open(path)?;
+    let mut s = String::new();
+    f.read_to_string(&mut s)?;
+    Ok(s)
+}
+
+//原来的
+fn cat(path: &Path) -> io::Result<String> {
+    let mut f = File::open(path)?;
+    let mut s = String::new();
+    match f.read_to_string(&mut s) {
+        Ok(_) => Ok(s),
+        Err(e) => Err(e),
+    }
+}
+
+
+```
+
+## 18.7 [程序参数](https://llever.com/rust-by-example-cn/std_misc/arg.html#a程序参数)
+
+命令行参数可使用 `std::env::args` 进行接收，这将返回一个迭代器，该迭代器会对各个参数产生一个字符串。
+
+```rust
+use std::env;
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    // 第一个参数是调用本程序的路径
+    println!("My path is {}.", args[0]);
+
+    // 其余的参数充当一般的命令行参量。
+    // 调用程序方式如下：
+    //   $ ./args arg1 arg2
+    println!("I got {:?} arguments: {:?}.", args.len() - 1, &args[1..]);
+}
+```
+
+
+
+```
+RUST_BACKTRACE=full cargo run  1234
+I got 1 arguments: ["1234"].
+```
+
+### 18.7.1 [参数分析](https://llever.com/rust-by-example-cn/std_misc/arg/matching.html#a参数分析)
+
+匹配可以用来解析简单的参数：
+
+```rust
+use std::env;
+
+fn increase(number: i32) {
+    println!("{}", number + 1);
+}
+
+fn decrease(number: i32) {
+    println!("{}", number - 1);
+}
+
+fn help() {
+    println!("usage:
+match_args <string>
+    Check whether given string is the answer.
+match_args {{increase|decrease}} <integer>
+    Increase or decrease given integer by one.");
+}
+
+fn main() {
+    //迭代器 collect
+    let args: Vec<String> = env::args().collect();
+
+    match args.len() {
+        // 没有传入参数
+        1 => {
+            println!("My name is 'match_args'. Try passing some arguments!");
+        },
+        // 一个传入参数
+        2 => {
+            match args[1].parse() {
+                Ok(42) => println!("This is the answer!"),
+                _ => println!("This is not the answer."),
+            }
+        },
+        // 一条命令和一个传入参数
+        3 => {
+            let cmd = &args[1];
+            let num = &args[2];
+            // 解析数字
+            let number: i32 = match num.parse() {
+                Ok(n) => {
+                    n
+                },
+                Err(_) => {
+                    println!("error: second argument not an integer");
+                    help();
+                    return;
+                },
+            };
+            // 解析命令
+            match &cmd[..] {
+                "increase" => increase(number),
+                "decrease" => decrease(number),
+                _ => {
+                    println!("error: invalid command");
+                    help();
+                },
+            }
+        },
+        // 所有其他情况
+        _ => {
+            // 显示帮助信息
+            help();
+        }
+    }
+}
+```
+
+
+
+```rust
+usage:
+match_args <string>
+    Check whether given string is the answer.
+match_args {increase|decrease} <integer>
+    Increase or decrease given integer by one.
+```
+
+## 18.8 [外部语言函数接口](https://llever.com/rust-by-example-cn/std_misc/ffi.html#a外部语言函数接口)
+
+Rust 提供了外部语言函数接口（Foreign Function Interface，FFI）到 C 语言库。外部语言函数必须声明在一个 `extern` 代码块，且该代码块要带有一个包含外部语言库名称的 `#[link]` 属性。
+
+```rust
+use std::fmt;
+
+// 此外部代码块链接到 libm 库
+#[link(name = "m")]
+extern {
+    // 这是外部语言函数
+    // 这计算了一个单精度复数的平方根
+    fn csqrtf(z: Complex) -> Complex;
+}
+
+fn main() {
+    // z = -1 + 0i
+    let z = Complex { re: -1., im: 0. };
+
+    // 调用一个外部语言函数是一种不安全的操作
+    let z_sqrt = unsafe {
+        csqrtf(z)
+    };
+
+    println!("the square root of {:?} is {:?}", z, z_sqrt);
+}
+
+// 最小化实现单精度复数
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct Complex {
+    re: f32,
+    im: f32,
+}
+
+impl fmt::Debug for Complex {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.im < 0. {
+            write!(f, "{}-{}i", self.re, -self.im)
+        } else {
+            write!(f, "{}+{}i", self.re, self.im)
+        }
+    }
+}
+```
+
+
+
+```
+the square root of -1+0i is 0+1i
+```
+
+# 19.[补充](https://llever.com/rust-by-example-cn/meta.html#a补充)
+
+有些主题并非没有教你怎么编写程序，但为你提供工具和基础设施支持，这会让编程工作变得更美好。这些主题包括：
+
+- 文档：通过附带的 `rustdoc` 生成库文档给用户。
+- 测试：对库创建测试套件，确保库准确地实现了你想要的功能。
+- 基准测试（benchmarking）：生成基准以保证高效运行。
+
+## 19.1. [文档](https://llever.com/rust-by-example-cn/meta/doc.html#a文档)
+
+文档注释对于需要文档的大型项目来说非常重要。当运行 [Rustdoc](http://doc.rust-lang.org/book/documentation.html)，这些注释就会编译成文档。它们使用 `///` 标记，并支持 [`Markdown`](https://en.wikipedia.org/wiki/Markdown)。
+
+```rust
+#![crate_name = "doc"]
+
+/// 这里给出一个人类
+pub struct Person {
+    /// 一个人必须有名字，不管 Juliet 多讨厌他/她。
+    name: String,
+}
+
+impl Person {
+    /// 返回给定名字的人
+    ///
+    /// # 参数
+    ///
+    /// * `name` - 字符串 slice，代表人物的名称
+    ///
+    /// # 示例：
+    ///
+    /// ```
+    /// // 可以在注释的特定标记内编写 Rust。
+    /// // 如果可以通过 --- 测试传递给 Rustdoc，它将会帮你进行测试！
+    /// let person = Person::new("name);
+    /// ```
+    pub fn new(name: &str) -> Person {
+        Person {
+            name: name.to_string(),
+        }
+    }
+
+    /// 给一个友好的问候！
+    /// 对被叫到的 `Person` 说 "Hello, [name]" 。
+    pub fn hello(& self) {
+        println!("Hello, {}!", self.name);
+    }
+}
+
+#[warn(dead_code)]
+fn main() {
+    let john = Person::new("John");
+
+    john.hello();
+}
+
+//$ rustc doc.rs --crate-type lib
+// $ rustdoc --test --extern doc="libdoc.rs"
+```
+
+要运行测试，首先将代码构建为库，然后告诉 `rustdoc` 在哪里找到库，以便它可以将代码链接成各个文档测试程序：
+
+```bash
+$ rustc doc.rs --crate-type lib
+$ rustdoc --test --extern doc="libdoc.rs"
+```
+
+（当你在库 crate 上运行 `cargo test` 时，`Cargo` 将自动生成并运行正确的 `rustc` 和 `rustdoc` 命令。）
+
+## 19.2. [测试](https://llever.com/rust-by-example-cn/meta/test.html#a测试)
+
+函数可以通过这些[属性](https://llever.com/rust-by-example-cn/meta/attribute.html)（attribute） 进行测试：
+
+- `#[test]` 将一个函数标记为一个单元测试。该函数不能接受参数且返回空。
+- `#[should_panic]` 将一个函数标记为 panic 测试。
+
+```rust
+// 当且仅当测试套件没有运行时，才条件编译 `main` 函数。
+#[cfg(not(test))]
+fn main() {
+    println!("If you see this, the tests were not compiled nor ran!");
+}
+
+// 当且仅当测试套件运行时，才条件编译 `test` 模块。
+#[cfg(test)]
+mod test {
+    // 需要一个辅助函数 `distance_test`。
+    fn distance(a: (f32, f32), b: (f32, f32)) -> f32 {
+        (
+            (b.0 - a.0).powi(2) +
+            (b.1 - a.1).powi(2)
+        ).sqrt()
+    }
+
+    #[test]
+    fn distance_test() {
+        assert!(distance((0f32, 0f32), (1f32, 1f32)) == (2f32).sqrt());
+    }
+    
+    #[test]
+    #[should_panic]
+    fn failing_test() {
+        assert!(1i32 == 2i32);
+    }
+}
+```
+
+通过 `cargo test` 或 `rustc --test` 运行测试。
+
+```bash
+$ rustc --test unit_test.rs
+$ ./unit_test 
+
+running 2 tests
+test test::distance_test ... ok
+test test::failing_test ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured
+```
+
+若 `--test` 没有包含进来，则会出现这样的情况：
+
+```bash
+$ rustc unit_test.rs
+$ ./unit_test
+If you see this, the tests were not compiled nor ran!
+```
+
+[参见：](https://llever.com/rust-by-example-cn/meta/test.html#a参见)
+
+[属性](https://llever.com/rust-by-example-cn/meta/attribute.html), [条件编译](https://llever.com/rust-by-example-cn/meta/attribute/cfg.html), 和 [`mod`](https://llever.com/rust-by-example-cn/meta/mod.html).
+
+
+
+# 20. [不安全操作](https://llever.com/rust-by-example-cn/unsafe.html#a不安全操作)
+
+为了介绍本章内容，我们借用[官方文档](http://doc.rust-lang.org/book/unsafe.html)的一句话, “在基本代码中尽可能减少不安全的代码”（”one should try to minimize the amount of unsafe code in a code base.”）。记住这句话，接着我们进入学习！在 Rust 中，不安全代码块是用于避开编译器的保护策略；具体地说，不安全代码块主要有 4 方面内容：
+
+- 解引用裸指针
+- 通过 FFI 调用函数（这个内容在本书其他章节介绍过了）
+- 使用 `std::mem::transmute` 来强制转型（change type）
+- 内联汇编(inline assembly)
+
+[原始指针](https://llever.com/rust-by-example-cn/unsafe.html#a原始指针)
+
+原始指针（裸指针） `*` 和引用 `&T` 有类似的功能，但引用总是安全的，因为它们保证指向一个有效的数据，这得益于借用检查器（borrow checker）。解引用一个裸指针只能通过不安全代码块中来完成。
+
+```rust
+fn main() {
+    let raw_p: *const u32 = &10;
+
+    unsafe {
+        assert!(*raw_p == 10);
+    }
+}
+```
+
+[Transmute（转变）](https://llever.com/rust-by-example-cn/unsafe.html#transmute转变)
+
+从一种类型变到另一种类型的允许简单转换，但是两种类型必须拥有相同的大小和排列：
+
+```rust
+fn main() {
+    let u: &[u8] = &[49, 50, 51];
+
+    unsafe {
+        assert!(u == std::mem::transmute::<&str, &[u8]>("123"));
+    }
+}
+```
+
+1
