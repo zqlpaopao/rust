@@ -286,7 +286,82 @@ fn main() {
     println!("你猜测的数是 {}",guess);
 }
 ```
-## 5.8 生成随机数
+## 5.8 包的crate的管理
+在cargo.toml中引入
+```
+rand = "0.3.14"
+rand = "^0.3.14"
+^代表和此版本兼容的所有版本都可以
+```
+然后会在cargo build的下载 https://crates.io/search?q=rand
+<img width="1032" alt="image" src="https://user-images.githubusercontent.com/43371021/230626714-86eaa893-eb1f-4b4f-8e27-af80afae5735.png">
+
+修改下载源
+```
+首先进入电脑的cargo目录，MAC OS 默认安装在 ~/.cargo下：
+
+cd ~/.cargo
+
+创建一个config文件，这里使用vim编辑器：
+
+vim config
+
+进到编辑界面后，键入i，切换到插入模式
+
+将下面的代码贴进去：
+
+[source.crates-io]
+
+registry = "https://github.com/rust-lang/crates.io-index"
+
+replace-with = 'ustc'
+
+[source.ustc]
+
+registry = "git://mirrors.ustc.edu.cn/crates.io-index"
+
+此步骤相当于修改了crates的下载源，切换到国内镜像。
+
+按esc退出编辑模式，键入:wq，表示保存并退出即可。
+
+再次尝试，就可以愉快的下载安装依赖啦~！
+```
+
+## 5.9 cargo.lock
+是符合本项目的包的版本
+如果存在会优先使用
+如果想升级的话在cargo.toml中国呢指定版本 运行
+```
+cargo update
+```
+或者直接执行cargo build 会自动进行升级
+升级会覆盖cargo.lock
+
+## 5.10 生成随机数
+```
+use std::io;
+
+use rand::Rng;//trait 相当于interface
+fn main(){
+    println!("猜数游戏-rand");
+
+    let mut guess = String::new();
+
+    let rand_num = rand::thread_rng().gen_range(1, 101);
+    println!("s随机数为{}",rand_num);
+    
+    match io::stdin().read_line(&mut guess) {
+        Ok(n)=>{
+            println!("read {n} byte" );
+        }
+        Err(error)=>{
+            println!("read {error}")
+        }
+        
+    }
+    println!("猜的数字为{}",guess)
+}
+```
 
 # 6. 数据类型
 
