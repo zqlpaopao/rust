@@ -166,10 +166,11 @@ ps: tree # win10 powershell 自带有 tree 查看文件目录结构的功能
 ```
 ps: cat Cargo.toml  
 [package]  
-name = “hellorust”  
-version = “0.1.”  
-authors = [“YourName “]  
-[dependencies]
+name = “hellorust”  //包名
+version = “0.1.”  //包的版本
+authors = [“YourName “]  //作者
+edition = "2021" //rust的发布版本
+[dependencies]//依赖的包
 ```
 
 
@@ -215,7 +216,77 @@ ps: cargo run # 编译和运行合在一起
 ps: cargo run —release # 同上，区别是是优化编译的
 ```
 
+## 5.4 cargo run
+会直接运行
+```
+cargo run  
+    Finished dev [unoptimized + debuginfo] target(s) in 0.03s
+     Running `target/debug/cargo_new`
+```
+如果没有改遍会直接运行
+如果有改变会编译在运行
 
+## 5.5 cargo check
+此命令是检测程序是否有错误的，和buil的的区别在于，此命令不回进行编译，因此更快
+```
+$ cargo check
+    Checking cargo_new v0.1.0 (/Users/zql/Desktop/rust/cargo_new)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.41s
+```
+
+## 5.6 为发布构建
+
+```
+cargo build --ralease
+```
+会进行代码优化，编译较慢，但是程序运行较快，进行代码优化
+会在target/release下生成可执行文件，不是target/debug
+<img width="521" alt="image" src="https://user-images.githubusercontent.com/43371021/230619487-a4f687d9-171e-48ee-ac80-8e7544266089.png">
+
+## 5.7 猜数游戏 
+```
+use std::io;
+
+//use 是引入库
+//std 标准库 的io
+
+fn main() {
+    println!("猜数游戏!");
+
+    //let 是定义变量
+    //mut 是可引用的 
+    //: String 是数据类型，自动推导的
+    //任何变量是不可变的 immutable 加上mut是可变的
+    // let mut foo = 1;
+    // let bar = foo;
+    // foo = 2;//cannot mutate immutable variable `foo`
+    // foo= 2; 加上mut 是可变的
+
+    //String utf8 可自懂扩展大小 标准库
+    let mut guess = String::new();
+
+    //io stdin 是控制台输入  read
+    io::stdin().read_line(&mut guess).expect("无法读取行");//不使用expect 也可以，会提示为对异常进行处理
+    //mut 是可变的 &引用默认也是不可变的，只能引用&mut 就是引用可变的
+    //如果不用use 引入 可以这样写// &mut 引用可变对象，否则是错误的
+    // std::io::stdin().read_line(guess).expect("错误信息并且推出")
+
+    //read_line返回的是io::Result 枚举类型
+    //io::Result Ok Err 也可以写成这昂
+   match  std::io::stdin().read_line(&mut guess){
+        Ok(n)=>{
+            println!("{n} byte read" )
+        }
+        Err(error)=>{
+            println!("read{error}")
+        }
+   }
+    
+
+    println!("你猜测的数是 {}",guess);
+}
+```
+## 5.8 生成随机数
 
 # 6. 数据类型
 
