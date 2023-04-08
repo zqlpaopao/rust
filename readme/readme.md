@@ -409,6 +409,39 @@ loop {
 }
 ```
 
+# 变量声明
+声明变量let
+默认是不可变的
+如果想让变量可变 在前面加上mut
+## 常量
+- 常量也是不可变的，是永久不可变的
+- const 声明常量
+- 常量作用域 在全局有效
+- 规范是全部大写 MAX_POINTS
+```
+const MAX_POINT :u32 = 100_00;
+```
+
+- 如果不使用let关键字，那么重新给非mut的变量赋值会报错，因为好似不可变的
+- 使用let声明的关键字，也是不可变的
+```
+
+
+fn main(){
+    //虽然是不同类型 但是是重新声明了变量是可以的
+    let space = " ";
+    let space = space.len();
+
+    let space1= " ";
+    //space1 = space1.len()
+    //   |              ^^^^^^^^^^^^ expected `&str`, found `usize`
+    //是如同一个变量，是那hi改变了类型，会报错
+    // space1 = space1.len()
+
+   
+}
+```
+
 # 6. 数据类型
 
 ### 整数型（Integer）
