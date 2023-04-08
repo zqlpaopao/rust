@@ -363,6 +363,52 @@ fn main(){
 }
 ```
 
+## 5.11 比较输入和随机数大小
+```
+
+use rand::Rng;
+fn main(){
+    println!("猜数游戏");
+
+    let rand_num = rand::thread_rng().gen_range(1, 100);
+    println!("生成的随机数是{}",rand_num);
+
+
+//loop是循环
+loop {
+    let mut guess = String::new();
+
+    match std::io::stdin().read_line(&mut guess){
+        Ok(n)=>println!("read {n} byte"),
+        Err(error)=>println!("read err:{error}")
+    }
+
+    let guess:u32 = match  guess.trim().parse() {
+        Ok(n)=>n,
+        Err(error)=>{
+            println!("error - err {error}");
+            //continue是跳出当前
+           continue;
+        },
+        
+    };
+
+    println!("输入的参数是{} rand的📖是{}",guess,rand_num);
+
+    match guess.cmp(&rand_num){
+        //break是终止loop循环
+        //返回的是Ordering类型
+        std::cmp::Ordering::Equal => {println!("win");break},
+        std::cmp::Ordering::Greater=> println!("is max"),
+        std::cmp::Ordering::Less =>  println!("is less"),
+        //都没匹配
+        // Other => {println!("other")},
+    }
+}
+   
+}
+```
+
 # 6. 数据类型
 
 ### 整数型（Integer）
