@@ -996,7 +996,7 @@ fn main(){
     makes_copy(i1);
     println!("i1 is {}",i1);
 }
-
+```
 //返回值也会发生所有权的move
 fn take_ownership(str:String)->String{
     println!("take_ownership str {}",str);
