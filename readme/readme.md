@@ -933,11 +933,11 @@ fn main(){
 ```
 	let y = 5;
 	x= 5
-	```
+```
 因为是基本类型 都会被压入stack
 - String 是在堆上分配
 - stack 上的数据是复制，基本数据类型
-	```
+```
 	fn main(){
     
 		let y = 5;
@@ -996,7 +996,7 @@ fn main(){
     makes_copy(i1);
     println!("i1 is {}",i1);
 }
-```
+
 //返回值也会发生所有权的move
 fn take_ownership(str:String)->String{
     println!("take_ownership str {}",str);
