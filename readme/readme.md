@@ -909,6 +909,255 @@ fn main(){
 
 ## String
 - 分配在heap上
+- 是可变的
+- from 创建
+	```
+	fn main(){
+
+	   let mut s = String::from("Hello ");
+	   s.push_str("word");
+
+	   println!("{}",s)
+
+	}
+	
+	Hello word
+	```
+- 可需改原因
+	- 字符串字面值在编译的时候就知道大小，被硬编码到可执行文件中，速度更快
+	- String 为支持其可变性，需要在heap分配内存
+	- Rust 的String 是所有者原则，当内存数据在不需要的时候就会立即释放，自动调用drop自动释放
+
+## 数据mave
+- 多个数据可以使用同一种方式来move 例如 x的变量的所有权交给y
+	```
+	let y = 5;
+	x= 5
+	```
+因为是基本类型 都会被压入stack
+- String 是在堆上分配
+- stack 上的数据是复制，基本数据类型
+	```
+	fn main(){
+    
+		let y = 5;
+		let x= 5;
+
+		println!("y is {},x is {}",y,x);
+		//y is 5,x is 5
+
+		let s = String::from("string");
+		let z1 = s.clone();
+		println!("za is {}",z1);
+		//za is string 如果同时使用两个 可以使用clone 在heap上重新clone一份
+
+		let z = s;
+
+
+		//println!("s is {}, z is {}",s,z);// ^ value borrowed here after move s把所有权给了z 所有s被清楚了，在打印就会报错
+
+	}
+
+```
+![image](https://user-images.githubusercontent.com/43371021/230769808-567a3695-fb52-4e7e-8057-7afbaafdc806.png)
+![image](https://user-images.githubusercontent.com/43371021/230769864-dfb594c1-8e28-46e1-9210-948b878f7b67.png)
+![image](https://user-images.githubusercontent.com/43371021/230770075-fcd04468-019c-4d10-b8eb-e500f867091a.png)
+![image](https://user-images.githubusercontent.com/43371021/230770100-9910b88d-8989-4445-9f49-c54cc9d05982.png)
+![image](https://user-images.githubusercontent.com/43371021/230770169-19e7b1d8-b4fe-4ceb-80de-b5996fe6bd54.png)
+
+- 基本数据类型都是可以copy的
+- 整数类型、char、bool、元组tpule，也是不可变的，但是全部是才可以
+![image](https://user-images.githubusercontent.com/43371021/230770313-dac8b8ca-863b-4a3f-84ec-91803f9bd15a.png)
+
+# 所有权与函数
+- 在语义上，将值传给函数或者赋值给变量是一样的
+- 将值传递给函数也会发生**移动**或者**复制**
+- 返回值也会发生所有权的move
+```
+fn main(){
+    let s = String::from("Hello World");
+    println!("s is {}",s);
+
+    let s1 = take_ownership(s);
+
+    /*
+         - move occurs because `s` has type `String`, which does not implement the `Copy` trait
+...
+5  |     let s1 = take_ownership(s);
+   |                             - value moved here
+6  |     println!("s is {}",s);
+   |                        ^ value borrowed here after move
+     */
+    //println!("s is {}",s);//报错 因为 s在调用函数的时候已经发生移动，此处不能使用
+    println!("s1 is {}",s1);//s1可以使用是在函数处理完毕后 将变量的所有权交给了s1
+
+
+    let i1 : i32 = 5;//i32是基本类型 自动实现了copy trait的这个copy接口 所以要所有权还在 只是在stakcopy了一份
+    makes_copy(i1);
+    println!("i1 is {}",i1);
+}
+
+//返回值也会发生所有权的move
+fn take_ownership(str:String)->String{
+    println!("take_ownership str {}",str);
+    str
+}
+
+fn makes_copy(i:i32){
+    println!("makes_copy i is {}",i);
+}
+
+//s is Hello World
+//take_ownership str Hello World
+//s1 is Hello World
+//makes_copy i is 5
+//i1 is 5
+```
+
+![image](https://user-images.githubusercontent.com/43371021/230770870-9bb86ecb-dff7-4d3c-a83c-db0d0ed7bd7f.png)
+
+# 引用和借用
+## 引用
+- 引用就是获取某些值但是不获取变量的所有权
+- 引用是&,相当于是取址操作
+```
+fn main(){
+    let s = String::from("Hello world");
+    println!("引用之前的s-{}",s);
+    //次数的函数调用传入的& 引用 就是取址操作 
+    let l = calculate_length(&s);
+    println!("引用之后s-{}，长度是-{}",s,l);
+
+}
+
+fn calculate_length(s :&String)->usize{
+    s.len()
+}
+
+引用之前的s-Hello world
+引用之后s-Hello world，长度是-11
+```
+
+## 借用
+-把引用给函数参数的这个行为就是借用 &操作
+- 是否可以修改 借用的值？
+```
+fn main(){
+    let s = String::from("Hello world");
+    println!("引用之前的s-{}",s);
+    //次数的函数调用传入的& 引用 就是取址操作 
+    let l = calculate_length(&s);
+    println!("引用之后s-{}，长度是-{}",s,l);
+
+}
+
+fn calculate_length(s :&String)->usize{
+    //s.push_str("!!");
+    //     ^^^^^^^^^^^^^^^^ `s` is a `&` reference, so the data it refers to cannot be borrowed as mutable
+    // s.push_str("!!");
+
+    //借用是不可以修改这个值的 ,
+    s.len()
+}
+```
+## 可变引用
+- 可变引用 就是引用的变量是可变的 就可以修改
+- 变量为可变mut 其次是& 传参和入参 都是&mut
+- 可变引用另一种 此值就是可变的，也是不可以的，这种属于借用，借用和引用都是不可以的，只有可变引用才可以 &mut
+- 在一个作用域内只能有一个可变引用，好处是在编译就能保证不会产生data race
+- 不同的作用域是可以同时有两个可变引用的
+- 不可以同时拥有一个可变引用和一个不可变引用，保证不可变引用数据的一致性
+```
+fn main(){
+    let mut s = String::from("Hello world");
+    println!("引用之前的s-{}",s);
+    //次数的函数调用传入的& 引用 就是取址操作 
+
+    //传参，首先是可变变量 mut 其次是& 或者直接是可变变量传入String 本身就是可变的 所有不回加mut
+    let l = calculate_length(&mut s);
+    println!("引用之后s-{}，长度是-{}",s,l);
+
+    //引用之前的s-Hello world
+    //引用之后s-Hello world!!，长度是-13      
+
+    let s1 = String::from("可变的变量");
+
+}
+
+//注意此处是&mut 传参的时候也是这样
+fn calculate_length(s :&mut String)->usize{
+    //s.push_str("!!");
+    //     ^^^^^^^^^^^^^^^^ `s` is a `&` reference, so the data it refers to cannot be borrowed as mutable
+    s.push_str("!!");
+
+    //借用是不可以修改这个值的 ,
+    s.len()
+}
+
+fn ke_bian(s:String)->usize{
+
+    //因为即使没加引用 这个是借用的变量 也是不能修改的
+    //s.push_str("，可变的变量的后缀");//s.push_str("，可变的变量的后缀");
+    // |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot borrow as mutable
+    s.len()
+}
+
+```
+
+同一作用域只能有一个可变引用
+不同作用域的同时存在的可变引用
+```
+fn main(){
+    let mut s = String::from("Hello world");
+    println!("引用之前的s-{}",s);
+    
+    {
+        let s1 =&mut s;
+    }
+
+    let s2 = &mut s;
+
+}
+```
+{}是一个作用域
+
+不可以同时拥有一个可变引用和一个不可变引用
+保证不可变引用的数据一致性
+```
+fn main(){
+    let mut s = String::from("Hello world");
+    println!("引用之前的s-{}",s);
+
+    //同一作用域
+    let s1 =&s;
+    let s3 =&s;
+    //s2.push_str("string");
+    // 10 |     println!("引用之后的s-{}",s);
+    // |                               ^ immutable borrow occurs here
+    // let s2 = &mut s;//前面有不变引用 ，此处如果有可变引用 保证不了引用的数据一致性
+    s2.push_str("string");
+    println!("引用之后的s-{}",s);
+    
+    println!("s-{},s1-{},s3-{},s2-{}",s,s1,s3,s2);
+
+}
+```
+# 悬空引用 dangling references
+- 一个指针引用了内存中的某个地址，但是这块地址已经释放给别人使用了
+- 在rust 保证永远不会产生悬空引用
+```
+fn main(){
+    let s = dangle();
+
+}
+fn dangle()->String{
+    let mut s = String::from("Hello world");
+    //^^ expected struct `String`, found `&String`
+    &s //因为在返回返回的时候会把变量move到新的变量上 s是个空 在引用的话会出现悬空引用
+}
+```
+
+
 
 ## 6.10 元类型
 
