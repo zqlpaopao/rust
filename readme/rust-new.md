@@ -1244,31 +1244,492 @@ fn main() {
 
 
 
+# 12. struct
+
+- 使用struct关键字定义整个struct命名，和go的区别是有：指定类型
+
+```
+struct User{
+	username :String,
+	emial :String,
+	sign_in_count : u64,
+	active:bool,
+}
+```
 
 
 
+- 想要使用struct，就必须创建struct的实例，为每个字段指定初始值,**必须全部制定初始值**
+- 值的顺序不重要
+
+```
+
+fn main() {
+   struct User {
+        username:String,
+        email:String,
+        age:u8,
+    }
+
+    //必须全部都要指定初始值
+    //missing structure fields:
+    //- email
+    //- age
+    let user = User{
+        username:String::from("zhangsan"),
+        email:String::from("email"),
+        age:28,
+    };
+
+    println!("user-username-{}",user.username);
+     println!("user-email-{}",user.email);
+     println!("user-age-{}",user.age);
+}
+
+user-username-zhangsan
+user-email-email
+user-age-28
+```
 
 
 
+- ==一但struct的实例是可变的，那么实例中的所有字段都是可变的==
+- struct 可以作为函数返回值
+- 字段初始化简写
+
+```
+
+fn main() {
+   struct User {
+        username:String,
+        email:String,
+        age:u8,
+    }
+
+    //必须全部都要指定初始值
+    //missing structure fields:
+    //- email
+    //- age
+    let username = String::from("zhangsan");
+    let email = String::from("email");
+    let user = User{
+        username,
+        email,
+        age:28,
+    };
+
+    println!("user-username-{}",user.username);
+    println!("user-email-{}",user.email);
+    println!("user-age-{}",user.age);
+
+}
+
+user-username-zhangsan
+user-email-email
+user-age-28
+```
 
 
 
+- struct 更新语法
+
+```
+
+fn main() {
+   struct User {
+        username:String,
+        email:String,
+        age:u8,
+    }
+
+    //必须全部都要指定初始值
+    //missing structure fields:
+    //- email
+    //- age
+
+    let user2 = User{
+        username:String::from("user2"),
+        email:String::from("user2-email"),
+        age:8,
+    };
+    let username = String::from("zhangsan");
+    let user = User{
+        username,
+        ..user2
+    };
+
+    println!("user-username-{}",user.username);
+    println!("user-email-{}",user.email);
+    println!("user-age-{}",user.age);
+
+}
+
+user-username-zhangsan
+user-email-user2-email
+user-age-8
+```
 
 
 
+## 12.1 tuple struct
+
+- 可以定义tuple struct
+
+- tuple struct整体有名，但是字段没名
+
+  适用：正给整个struct起名，但是不想给内部元素起名
+
+```rust
+struct Color(i32,i32,i32);
+struct Point(i32,i32,i32);
+
+let black = Color(0,0,0);
+let origin = Point(0,0,0);
+
+```
+
+Black 和origin 是不同类型
+
+访问 .下标
+
+```
+
+fn main() {
+   struct Color (i32,i32,i32);
+   let black = Color(9,9,9);
+   println!("black-first-{}",black.0);
+
+    let b1 = Color(3,4,5);
+    //这样是不行的
+    //expected struct `Color`, found tuple
+//    let (b1,b2,b3) = bb;
+    println!("black-b1-{}",b1.0);
+     println!("black-b2-{}",b1.1);
+      println!("black-b3-{}",b1.2);
+
+}
+```
 
 
 
+## 12.1 unit-like-struct
+
+struct () 没有任何字段的
+
+- ==适用于某个类型实现trait，但是里面没有任何的存储数据==
 
 
 
+## 12.3 struct数据的所有权
+
+```
+struct User{
+	username:String,
+	email:String,
+	age:u8,
+}
+```
+
+- 这里的字段使用了String而不是&str
+- 该struct实例拥有其所有的数据
+- 只要改struct实例是有效的，那么里面的字段也是有效的
+- struct里面也可以存放引用，需要用到生命周期
+- ==声明周期保证，只要struct是有效的，里面的引用也是有效的==
+- 如果struct里面存储引用，但是没有使用生命周期，就会报错
+
+![image-20230411205340675](rust-new.assets/image-20230411205340675.png)
 
 
 
+## 12.4 struct例子
+
+```
+
+//#[derive(Debug)] derive是派生的意思
+#[derive(Debug)]
+struct Rectangle {
+    width:u32,
+    height:u32,
+}
+fn main() {
+   let rect = Rectangle{
+    width:30,
+    height:50,
+   };
+
+   //此处是借用，所有权还在
+   println!("{}",area(&rect));
+
+   //打印结构化数据
+    //    println!("{:?}",rect)
+    /*
+    16 |    println!("{:?}",rect)
+    |                    ^^^^ `Rectangle` cannot be formatted using `{:?}`
+    |
+    = help: the trait `Debug` is not implemented for `Rectangle`
+    = note: add `#[derive(Debug)]` to `Rectangle` or manually `impl Debug for Rectangle`
+    */
+
+   println!("{:?}",rect);
+   println!("{:#?}",rect)
+
+}
+
+fn area(rect :&Rectangle)->u32{
+    rect.width*rect.height
+}
+
+
+1500
+Rectangle { width: 30, height: 50 }
+Rectangle {
+    width: 30,
+    height: 50,
+}
+```
 
 
 
+## 12.5 struct 的方法
 
+- 方法和实例类似：fn关键字、名称、参数、返回值
+- 不同之处
+- 方法在struct的上下文中定义
+- 第一个参数是self，表示方法被调用的struct实例
+
+```
+
+//#[derive(Debug)] derive是派生的意思
+#[derive(Debug)]
+struct Rectangle {
+    width:u32,
+    height:u32,
+}
+
+impl Rectangle {
+    //此处是借用 可以是self 值得move ，也可以是&mut，需要struct变量也是mut的
+    fn area(&self)->u32{
+        self.width*self.height
+    }
+}
+
+fn main() {
+   let rect = Rectangle{
+    width:30,
+    height:50,
+   };
+
+   //此处是借用，所有权还在
+   println!("{}",rect.area());
+
+
+   println!("{:?}",rect);
+   println!("{:#?}",rect)
+
+}
+
+1500
+Rectangle { width: 30, height: 50 }
+Rectangle {
+    width: 30,
+    height: 50,
+}
+
+```
+
+- 定义方法在impl块里面定义
+- 方法调用，如果调用的是方法是.，如果不是方法是::
+
+
+
+**方法调用的运算符**
+
+- rust会自动引用或者解引用
+- 在调用方法的时候发生这种行为
+- 在调用方法时候，会自动添加&、&mut或者*
+
+下边的代码效果相同
+
+P1.distance(&p2)
+
+(&p1).disance(&p2)
+
+
+
+## 12.6 关联函数
+
+- 可以在impl块定义，但是不把self当作第一个参数
+- 调用时::，而方法是.
+
+```
+
+
+//#[derive(Debug)] derive是派生的意思
+#[derive(Debug)]
+struct Rectangle {
+    width:u32,
+    height:u32,
+}
+
+impl Rectangle {
+    //此处是借用 可以是self 值得move ，也可以是&mut，需要struct变量也是mut的
+    fn area(&self)->u32{
+        self.width*self.height
+    }
+    fn square(size:u32)->Rectangle {
+        Rectangle { width: size, height: size }
+    }
+}
+
+fn main() {
+   let rect = Rectangle{
+    width:30,
+    height:50,
+   };
+
+   //此处是借用，所有权还在
+   println!("{}",rect.area());
+
+
+   println!("{:?}",rect);
+   println!("{:#?}",rect);
+
+   let square = Rectangle::square(40);
+      println!("{:#?}",square)
+}
+
+1500
+Rectangle { width: 30, height: 50 }
+Rectangle {
+    width: 30,
+    height: 50,
+}
+Rectangle {
+    width: 40,
+    height: 40,
+}
+```
+
+- 每个stauct 允许有多个impl块
+
+![image-20230411212444882](rust-new.assets/image-20230411212444882.png)
+
+
+
+# 13 枚举
+
+- 关键字 enum 名字
+
+```
+#[derive(Debug)]
+enum IpAddrKind{
+    V4,
+    V6,
+}
+
+fn main(){
+    let four = IpAddrKind::V4;
+    let six = IpAddrKind::V6;
+
+    route(four);
+    route(six);
+    route(IpAddrKind::V4)
+
+}
+
+fn route(ip_kind:IpAddrKind){
+println!("{:#?}",ip_kind)
+}
+
+V4
+V6
+V4
+```
+
+
+
+## 13.1 添加数据到枚举变体中
+
+![image-20230411213237288](rust-new.assets/image-20230411213237288.png)
+
+```
+#[derive(Debug)]
+enum IpAddrKind{
+    V4(u8,u8,u8,u8),
+    V6(String),
+}
+
+fn main(){
+    let four = IpAddrKind::V4;
+    let six = IpAddrKind::V6;
+
+    route(four(127,1,1,0));
+    route(six(String::from("aaa:kkk:kkk")));
+
+}
+
+fn route(ip_kind:IpAddrKind){
+println!("{:#?}",ip_kind)
+}
+
+V4(
+    127,
+    1,
+    1,
+    0,
+)
+V6(
+    "aaa:kkk:kkk",
+)
+
+```
+
+
+
+## 13.2 标准库中的struct
+
+
+
+![image-20230411213507344](rust-new.assets/image-20230411213507344.png)
+
+
+
+## 13.3 为枚举定义方法
+
+```
+#[derive(Debug)]
+enum IpAddrKind{
+    V4(u8,u8,u8,u8),
+    V6(String),
+}
+
+impl IpAddrKind {
+    fn ip_addr(&self){
+        println!("{:#?}",self)
+    }
+}
+
+fn main(){
+    let four = IpAddrKind::V4(127,1,1,0);
+    let six = IpAddrKind::V6(String::from("value"));
+
+    four.ip_addr();
+    six.ip_addr();
+
+}
+
+
+
+V4(
+    127,
+    1,
+    1,
+    0,
+)
+V6(
+    "value",
+)
+```
 
 
 
