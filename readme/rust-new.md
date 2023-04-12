@@ -1733,10 +1733,75 @@ V6(
 
 
 
+# 14. Option<T>
+- option 枚举有Some<T>和None
+```
+enum Option <T>{
+	Some<T>,
+	None,
+}
+```
+
+	
+```
+	// #[derive(Debug)]
+fn main(){
+    let some = Option::Some(String::from("hello World"));
+    is_some(some);
 
 
 
+    // let no = None;
+    // is_some(no)
+}
 
+//让T派生debug这个trait，就可以打印了
+fn is_some<T:std::fmt::Debug>(op:Option<T>){
+    match op {
+        Some(op)=> println!("{:#?}",op),
+        None=>println!("none"),
+    }
+}
+"hello World"
+
+```
+
+# 15 match
+- match 必须穷举所有情况
+	
+```
+
+#![allow(unused)]
+fn main() {
+match target {
+    模式1 => 表达式1,
+    模式2 => {
+        语句1;
+        语句2;
+        表达式2
+    },
+    _ => 表达式3
+}
+}
+```
+
+## 15.1 使用 match 表达式赋值
+```
+//同意所有没使用的代码
+#[allow(dead_code)]
+enum IpAddr{
+    V4,
+    V6,
+}
+fn main(){
+    let addr = IpAddr::V4;
+    let some = match addr {
+        IpAddr::V4=>"127.0.0.1",
+        _ => "::1",
+    };
+    println!("{}",some)
+}
+```\
 
 
 
