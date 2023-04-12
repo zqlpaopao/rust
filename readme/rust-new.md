@@ -1742,7 +1742,7 @@ enum Option <T>{
 }
 ```
 
-	
+
 ```
 	// #[derive(Debug)]
 fn main(){
@@ -1803,7 +1803,8 @@ fn main(){
 }
 ```
 
-## 15.2 if let
+# 16.  if let
+
 - 和match相比。match需要对所有的情况进行匹配，if let是可以对一种情况进行匹配，其余情况不需要处理的时候
 ```
 
@@ -1828,11 +1829,13 @@ fn main(){
     //如此写诗没有问题的，上边的有赋值的歧义
     if let Some(3) = three{
         println!("if let three");
+    }else{
+    
     }
 }
 ```
-	
-# 16. matches!宏
+
+# 17. matches!宏
 
 matches!(expr,pattern)
 - expr:是指条件判断的入参
@@ -1911,29 +1914,159 @@ fn main(){
 
 
 
+# 18. Package 、crate、module
+
+rust的代码组织
+
+- 模块系统
+- package(包)：cargo的特性，让你构建、测试、共享crate
+- crate(单元包)：一个模块树，它可以产生一个libary或者可执行文件
+- module(模块)：use：让你控制代码的组织、作用域、私有路径
+- path(路径)：为struct、function或者module等项命名的方式
+
+
+
+## 18.1 package 和crate
+
+crate的类型
+
+- binary
+- libary
+
+crate root
+
+- 是源代码文件
+- rust编译器从这里开始，组成你的的crate的根module
+
+package
+
+- 包含一个cargo.toml，它描述了如何构建这些crates
+- 只能包含0-1个libary crate
+- 可以包含多个binary crate
+- 但是至少包含一个crate（library、binary）
+
+
+
+![image-20230412213606710](rust-new.assets/image-20230412213606710.png)
+
+![image-20230412213722095](rust-new.assets/image-20230412213722095.png)
+
+## 18.2 module
+
+![image-20230412213900490](rust-new.assets/image-20230412213900490.png)
+
+
+
+![image-20230412214108372](rust-new.assets/image-20230412214108372.png)
+
+![image-20230412214212531](rust-new.assets/image-20230412214212531.png)
+
+## 18.3 path路径
+
+- 绝对路径：从crate开始，使用crate或者字面值crate
+- 相对路径：从当前模块开始，使用self，super或者当前模块的标识符
+
+路径至少由一个标识符组成，标识符之前使用::
+
+```
+mod front_of_house{
+    mod hosting{
+        fn add_to_waitlist(){}
+        fn seat_at_table(){}
+    }
+
+    mod serving{
+        fn take_order(){}
+        fn servr_order(){}
+    }
+}
+
+pub fn eat_at_restaurant(){
+    //绝对路径
+    //绝对路径使用crate这个字面值，关键字
+    crate::front_of_house::hosting::add_to_waitlist();
+
+    //相对路径
+    front_of_house::hosting::add_to_waitlist()
+}
+```
+
+### 18.3.1  私有边界
+
+![image-20230412215005564](rust-new.assets/image-20230412215005564.png)
+
+![image-20230412215132850](rust-new.assets/image-20230412215132850.png)
+
+
+
+### 18.3.2 super
+
+- Super 来访问父级的内容
+
+```
+fn serve_order() {
+    
+}
+
+mod back_of_house{
+    fn six_int_order(){
+        super::serve_order()
+    }
+}
+```
+
+
+
+![image-20230412215430251](rust-new.assets/image-20230412215430251.png)
+
+
+
+# 19. Pub
+
+## 19.1 pub struct
+
+![image-20230412215540949](rust-new.assets/image-20230412215540949.png)
+
+![image-20230412215600264](rust-new.assets/image-20230412215600264.png)
+
+```
+mod back_of_house{
+    pub struct Breakfast{
+        pub toast:String,
+        seasonal_fruit:String,
+    }
+
+    impl Breakfast {
+        pub fn summer(toast:&str)->Breakfast {
+            Breakfast { 
+                toast: String::from(toast), 
+                seasonal_fruit: String::from("peaches") }
+        }
+    }
+}
+
+pub fn eat_at(){
+    let mut meal = back_of_house::Breakfast::summer("tye");
+    //共有的是可以访问的，meal String是可变的 ，因为加了mut
+    meal.toast = String::from("wheat");
+    println!("like {}",meal.toast);
+    //私有的不可访问
+    //field `seasonal_fruit` of `Breakfast` is private
+    meal.seasonal_fruit = String::from("value")
+}
+```
+
+
+
+![image-20230412220232198](rust-new.assets/image-20230412220232198.png)
 
 
 
 
 
+## 19.2 pub enum
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+![image-20230412220432083](rust-new.assets/image-20230412220432083.png)
 
 
 
