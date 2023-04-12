@@ -1834,7 +1834,80 @@ fn main(){
 	
 # 16. matches!宏
 
+matches!(expr,pattern)
+- expr:是指条件判断的入参
+- pattern 是期待为true的匹配模式。
 
+	
+```
+
+//同意所有没使用的代码
+#[allow(dead_code)]
+#[derive(PartialEq)]
+#[derive(Debug)]
+enum IpAddr{
+    V4,
+    V6,
+}
+fn main(){
+   let options = [IpAddr::V4,IpAddr::V6];
+
+   //传统的match
+   for (_,v) in options.iter().enumerate()  {
+       match v {
+        IpAddr::V4 =>{
+            println!("v4")
+        },
+        _ => println!("other"),
+       } 
+   }
+
+   //filter
+   //IpAddr 必须实现 #[derive(PartialEq)] 否则x == IpAddr::V4 会报错
+   let filter = options.iter().filter(|x| **x == IpAddr::V4);
+   println!("{:?}",filter);
+
+   //使用matches!
+   let b = options.iter().filter(|x| matches!(x,IpAddr::V4));
+
+   println!("b-{:?}",b.);
+
+}
+v4
+other
+Filter { iter: Iter([V4, V6]) }
+b-Filter { iter: Iter([V4, V6]) }
+
+```
+
+```
+
+//同意所有没使用的代码
+#[allow(dead_code)]
+#[derive(PartialEq)]
+#[derive(Debug)]
+enum IpAddr{
+    V4,
+    V6,
+}
+fn main(){
+   let f = 'f';
+
+   let bo = matches!(f,'A'..='Z'|'a'..='z');
+    println!("bo-{}",bo);
+
+    let some = Some(4);
+
+    //匹配到Some(x) if x > 2的值代码如下，其中这里的匹配模式:匹配守卫 if x > 2
+    //Some(x)是pattern匹配模式
+    //if x > 2表示guard的匹配守卫(match guard)
+    //这里的get_bar匹配守卫到其中一个模式后，返回true,未匹配到返回fasle
+    assert!(matches!(some,Some(x) if x > 2 ));
+
+}
+
+//bo-true
+```
 
 
 
