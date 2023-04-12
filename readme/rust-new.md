@@ -1801,7 +1801,39 @@ fn main(){
     };
     println!("{}",some)
 }
-```\
+```
+
+## 15.2 if let
+- 和match相比。match需要对所有的情况进行匹配，if let是可以对一种情况进行匹配，其余情况不需要处理的时候
+```
+
+//同意所有没使用的代码
+#[allow(dead_code)]
+enum IpAddr{
+    V4,
+    V6,
+}
+fn main(){
+   let three = Some(3u8);
+
+    match three {
+        Some(3)=>println!("three"),
+        _ => println!("none"),
+    }
+
+    //irrefutable `if let` pattern
+    // this pattern will always match, so the `if let` is useless
+    // if let three = Some(3){
+    
+    //如此写诗没有问题的，上边的有赋值的歧义
+    if let Some(3) = three{
+        println!("if let three");
+    }
+}
+```
+	
+# 16. matches!宏
+
 
 
 
