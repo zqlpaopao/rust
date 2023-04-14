@@ -2869,8 +2869,341 @@ hello world
 
 
 
+## 24.6 字符串操作
+
+### 24.6.1 追加push
+
+- 在字符串尾部可以使用 `push()` 方法追加==字符 `char`==
+- 也可以使用 `push_str()` 方法追加字符串字面量。
+- 这两个方法都是==**在原有的字符串上追加，并不会返回新的字符串**==。
+- 由于字符串追加操作要修改原来的字符串，==则该字符串必须是可变的，即**字符串变量必须由 `mut` 关键字修饰**。==
+
+```
+#[derive(Debug)]
+struct Type(String,u32);
+fn main(){
+
+    let mut str = String::from("push前的字符长");
+    say(&str);
+    str.push_str("push后的字符长-push_str");
+    say(&str);
+
+    //追加字符
+    str.push('!');
+    say(&str);
 
 
+}
+
+fn say(s:&str){
+    println!("say-{}",s)
+}
+
+say-push前的字符长
+say-push前的字符长push后的字符长-push_str
+say-push前的字符长push后的字符长-push_str!
+```
+
+### 24.6.2 insert 插入
+
+- insert插入==单个字符==
+- insert_str插入字符串
+- 两个方法都需要两个参数，第一个参数是插入的位置，第二个是插入的数据
+
+```
+fn main() {
+    let mut str= String::from("hello world");
+    str.insert(5, ',');
+
+    str.insert_str(str.len(), "!");
+
+    println!("str-{}   ",str)
+}
+
+str-hello, world! 
+```
+
+
+
+### 24.6.3 替换 replace全部、replacen个数、replace_range范围
+
+==replace== 全部替换
+
+- 此方法适用于&str和String两种
+- 此方法会有返回值，返回新的，==有&str==肯定返回新的
+- 参数1是要修改的字符串，参数2是要修改后的字符串
+
+```
+fn main() {
+    let  str= String::from("I  like rust");
+    let str = str.replace("rust", "RUST");
+
+    println!("{}   ",str);
+
+    //替换&str
+    let str = "I like rust";
+
+    let str = str.replace("rust", "RUST");
+
+    println!("{}   ",str);
+}
+
+I  like RUST   
+I like RUST   
+```
+
+
+
+==replacen== 指定替换的个数
+
+- 适用于String、&str
+- 前两个参数和replace是一样的，第三个是替换的个数
+
+```
+fn main() {
+    let  str= String::from("I  like rust,must rust");
+    let str = str.replacen("rust", "RUST",1);
+
+    println!("{}   ",str);
+
+    //替换&str
+    let str = "I like rust,must rust";
+
+    let str = str.replacen("rust", "RUST",2);
+
+    println!("{}   ",str);
+}
+
+I  like RUST,must rust   
+I like RUST,must RUST   
+```
+
+
+
+==replace_range== 指定范围替换数据
+
+- 此方法不会返回新值，所以只能适用于String ，还必须是mut的
+- 第一个是替换的范围，第二个是要替换后的内容
+
+```
+fn main() {
+    let  mut str= String::from("I like rust,must rust");
+    str.replace_range(7..10, "RUST");
+
+    println!("{}   ",str);
+
+}
+I like RUSTt,must rust   
+```
+
+### 24.6.4 删除
+
+与字符串删除相关的方法有 4 个，他们分别是 `pop()`，`remove()`，`truncate()`，`clear()`。这四个方法仅适用于== `String` ==类型。
+
+
+
+==pop==--删除并返回字符串的最后一个字符
+
+- **该方法是直接操作原来的字符串**。但是存在返回值，其返回值是一个 `Option` 类型，如果字符串为空，则返回 `None`。 示例代码如下：
+
+```
+fn main() {
+    let   mut str= String::from("I like rust,must rust 中文!");
+    let pop = str.pop();
+    let pop1 = str.pop();
+    dbg!(str);
+    dbg!(pop);
+    dbg!(pop1);
+
+}
+
+[src/main.rs:5] str = "I like rust,must rust 中"
+[src/main.rs:6] pop = Some(
+    '!',
+)
+[src/main.rs:7] pop1 = Some(
+    '文',
+)
+```
+
+
+
+**`remove` —— 删除并返回字符串中指定位置的==字符==**
+
+- 有返回值
+- 操作原来的数据
+- 只接受一个参数，要删除位置
+
+**该方法是直接操作原来的字符串**。但是存在返回值，其返回值是删除位置的字符串，只接收一个参数，表示该字符起始索引位置。`remove()` 方法是按照字节来处理字符串的，如果参数所给的位置不是合法的字符边界，则会发生错误。
+
+```
+fn main() {
+    let mut str = String::from("remve测试!");
+    println!("length-{}",str.len());
+
+    let remove = str.remove(str.len()-1);
+    println!("length-{}",str.len());
+    println!("{}",str);
+
+    //hread 'main' panicked at 'byte index 10 is not a char boundary; it is inside '试' (bytes 8..11) of `remve测试`',
+    //弹出的是字节,但是中文式三子节，取不出一个完整的，所以报错
+    let remove1 = str.remove(str.len()-1);
+    println!("{}",str);
+    println!("{}",remove);
+    println!("{}",str);
+    println!("{}",remove1);
+
+
+}
+
+length-12
+length-11
+remve测试
+thread 'main' panicked at 'byte index 10 is not a char boundary; it is inside '试' (bytes 8..11) of `remve测试`', /rustc/9eb3afe9ebe9c7d2b84b71002d44f4a0edac95e0/library/alloc/src/string.rs:1336:24
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+```
+
+
+
+`truncate` —— 删除字符串中从==指定位置开始到结尾的全部字符==
+
+**该方法是直接操作原来的字符串**。无返回值。该方法 `truncate()` 方法是按照字节来处理字符串的，如果参数所给的位置不是合法的字符边界，则会发生错误。
+
+```
+fn main() {
+    let mut str = String::from("remve测试!");
+    
+    println!("length-{}",str.len());
+    println!("{}",str);
+
+    //truncate
+    //thread 'main' panicked at 'assertion failed: self.is_char_boundary(new_len)', /rustc/9eb3afe9ebe9c7d2b84b71002d44f4a0edac95e0/library/alloc/src/string.rs:1279:13
+    //note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+    //原因是5到末尾11都是中文，这里是从字符开始的所以这个范围的都会报错
+    // str.truncate(7);
+    str.truncate(2);
+    println!("length-{}",str.len());
+    println!("{}",str);
+
+
+}
+
+length-12
+remve测试!
+length-2
+re
+```
+
+
+
+==`clear` —— 清空字符串== 此方法一看就是只能是String
+
+- 清空原来的字符串
+- 必须是mut
+
+```
+fn main() {
+    let mut str = String::from("remve测试!");
+    
+    println!("length-{}",str.len());
+    println!("{:p}",&str);
+    println!("{}",&str);
+
+   str.clear();
+   println!("{:p}",&str);
+   println!("{}",&str);
+
+
+}
+
+length-12
+0x16f95ab80
+remve测试!
+0x16f95ab80
+
+```
+
+可以看到地址没变，内容变为空了
+
+
+
+### 24.6.5 连接 (Concatenate)
+
+1、使用 `+` 或者 `+=` 连接字符串
+
+<img width="823" alt="image" src="https://user-images.githubusercontent.com/43371021/232007814-05b28217-0f9f-43eb-b5d9-38ad87eac60a.png">
+<img width="885" alt="image" src="https://user-images.githubusercontent.com/43371021/232008302-88c60810-8134-4aa9-b232-1261fbc3dbc2.png">
+
+2、使用 format! 连接字符串
+
+format! 这种方式适用于 String 和 &str 。format! 的用法与 print! 的用法类似，详见格式化输出。
+
+示例代码如下：
+
+```
+fn main() {
+    let s1 = "hello";
+    let s2 = String::from("rust");
+    let s = format!("{} {}!", s1, s2);
+    println!("{}", s);
+}
+```
+代码运行结果：
+```
+hello rust!
+```
+	
+### 24.6.6 字符串转义
+我们可以通过转义的方式 \ 输出 ASCII 和 Unicode 字符。
+
+```
+fn main() {
+    // 通过 \ + 字符的十六进制表示，转义输出一个字符
+    let byte_escape = "I'm writing \x52\x75\x73\x74!";
+    println!("What are you doing\x3F (\\x3F means ?) {}", byte_escape);
+
+    // \u 可以输出一个 unicode 字符
+    let unicode_codepoint = "\u{211D}";
+    let character_name = "\"DOUBLE-STRUCK CAPITAL R\"";
+
+    println!(
+        "Unicode character {} (U+211D) is called {}",
+        unicode_codepoint, character_name
+    );
+
+    // 换行了也会保持之前的字符串格式
+    let long_string = "String literals
+                        can span multiple lines.
+                        The linebreak and indentation here ->\
+                        <- can be escaped too!";
+    println!("{}", long_string);
+}
+```
+		 
+当然，在某些情况下，可能你会希望保持字符串的原样，不要转义：
+
+```
+fn main() {
+    println!("{}", "hello \\x52\\x75\\x73\\x74");
+    let raw_str = r"Escapes don't work here: \x3F \u{211D}";
+    println!("{}", raw_str);
+
+    // 如果字符串包含双引号，可以在开头和结尾加 #
+    let quotes = r#"And then I said: "There is no escape!""#;
+    println!("{}", quotes);
+
+    // 如果还是有歧义，可以继续增加，没有限制
+    let longer_delimiter = r###"A string with "# in it. And even "##!"###;
+    println!("{}", longer_delimiter);
+}
+```
+
+### 24.6.7 操作UTF-8数据
+- 使用.chars()
+<img width="809" alt="image" src="https://user-images.githubusercontent.com/43371021/232009264-f90be6cf-24d9-477d-a682-a27f82dd2fd2.png">
+
+# 25 字符串深度解析
+<img width="847" alt="image" src="https://user-images.githubusercontent.com/43371021/232009861-36d171f4-fb0c-45d3-b760-889c79eeb8ce.png">
 
 
 
