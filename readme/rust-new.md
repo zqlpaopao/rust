@@ -2502,7 +2502,373 @@ fn main() {
 
 
 
-# 23. Vector可变数组
+# 23. 动态数据Vector
+
+动态数组允许你存储多个值，这些值在内存中一个紧挨着另一个排列，因此访问其中某个元素的成本非常低。动态数组只能==存储相同类型的元素==，如果你想存储不同类型的元素，可以使用之前讲过的枚举类型或者特征对象。
+
+## 23.1 创建vector
+
+**第一种初始化赋值**
+
+```
+fn main(){
+    let mut er = vec![1,2,3];
+    //cannot mutate immutable variable `er`
+    er.push(4);
+    println!("{:?}",er)
+}
+```
+
+
+
+**初始化后fuzhi**
+
+```
+fn main(){
+    let mut ve: Vec<u32> = Vec::new();
+    ve.push(21);
+
+    println!("{:?}",ve);
+}
+```
+
+## 23.2 Vector 与其元素共存亡
+
+跟结构体一样，`Vector` 类型在超出作用域范围后，会被自动删除：
+
+```rust
+{
+    let v = vec![1, 2, 3];
+
+    // ...
+} // <- v超出作用域并在此处被删除
+```
+
+当 `Vector` 被删除后，它内部存储的所有内容也会随之被删除。目前来看，这种解决方案简单直白，但是当 `Vector` 中的元素被引用后，事情可能会没那么简单。
+
+## 23.3 从Vevtor读取数据
+
+**使用下标读取数据**
+
+```
+fn main(){
+    let mut er = vec![1,2,3];
+    //cannot mutate immutable variable `er`
+    er.push(4);
+    println!("{:?}",er);
+
+    //使用下标读取数据
+    let three = er[2];
+    println!("three-{}",three);
+
+    //下标去读数据超过范围
+    //thread 'main' panicked at 'index out of bounds: the len is 4 but the index is 4', src/main.rs:13:17
+    //超过数据范围的会报错，阻止程序执行
+    // let range = er[er.len()];
+    // println!("读取超过vec的数据-{}",range);
+
+    //使用.get读取数据
+    let three_index_get  = er.get(2);
+    println!("使用get读取的数据是-{:?}",three_index_get);
+
+    //使用.get获取超过数据范围的数据
+    let get_range = er.get(100);
+    println!("get获取超过数据范围的数据-{:?}",get_range);
+}
+
+[1, 2, 3, 4]
+three-3
+使用get读取的数据是-Some(3)
+get获取超过数据范围的数据-None
+```
+
+- 可以使用下标获取数据-[index]
+- ==如果下标获取数据超过范围，会报错，阻止程序执行==
+- 也可以使用.get获取数据
+- 使用.get获取数据==返回的是Option==，超过范围会返回None
+
+## 23.4 借用与可变借用不可同时存在
+
+```
+fn main(){
+    let mut er = vec![1,2,3];
+    let first = &er[0];
+    println!("借用的第一个元素{}",first);
+
+    //cannot borrow `er` as mutable because it is also borrowed as immutable
+    //因为下边仍然存在不可变引用，新增数据导致Vec发生内存copy，数据要copy到新的内存上，地址发生变化
+    //所以不能发生可变引用
+    er.push(8);
+
+    //上面如果first 不在push后使用，生命周期到println之后就结束了
+    //即使是push了元素产生了可变引用，也不会影响
+    //但是在push之后first仍然适用
+    println!("借用的第一个元素{}",first);
+}
+```
+
+- 如果不可变引用在可变行为的上面，==是可以的==
+- 但是如果在可变行为的后面使用不可变数据是==不行的==，因为数据在内存是连续排列的，当数据发生新增会新开辟地址，将老的数据copy过去，此时数据地址会发生变化
+
+**如果不是不可变引用呢**
+
+```
+fn main(){
+    let mut er = vec![1,2,3];
+    let first = er[0];
+    println!("借用的第一个元素{}",first);
+
+    //cannot borrow `er` as mutable because it is also borrowed as immutable
+    //因为下边仍然存在不可变引用，新增数据导致Vec发生内存copy，数据要copy到新的内存上，地址发生变化
+    //所以不能发生可变引用
+    er.push(8);
+
+    //上面如果first 不在push后使用，生命周期到println之后就结束了
+    //即使是push了元素产生了可变引用，也不会影响
+    //但是在push之后first仍然适用
+    println!("借用的第一个元素{}",first);
+
+
+    //如果是heap的数据
+    let mut str = vec![String::from("first"),String::from("two")];
+    //move occurs because value has type `String`, which does not implement the `Copy` trait
+    //是不可以move的 可以使用&,但是就和基本类型一样了
+    let heap_first = str[0];
+    println!("heap_first的move-{}",heap_first);
+
+    //进行数据可变
+    // str.push(String::from("three"));
+
+    // println!("heap_first的move-{}",heap_first);
+}
+```
+
+
+
+## 23.5 vec的迭代
+
+```
+fn main(){
+    let er = vec![1,2,3];
+    
+    for i in er{
+        println!("迭代的元素-{}",i);
+    }
+    //迭代的元素-1
+    // 迭代的元素-2
+    // 迭代的元素-3
+
+    //迭代中改变元素
+    let mut num = vec![1,2,3,4,5];
+
+    for i in &mut num{
+         *i  *= 10;
+         println!("迭代中改变元素-{}",i);
+    }
+    println!("迭代中改变元素的数组-{:?}",num)
+
+}
+
+迭代的元素-1
+迭代的元素-2
+迭代的元素-3
+迭代中改变元素-10
+迭代中改变元素-20
+迭代中改变元素-30
+迭代中改变元素-40
+迭代中改变元素-50
+迭代中改变元素的数组-[10, 20, 30, 40, 50]
+```
+
+
+
+## 23.6 存储不同类型
+
+```
+#[derive(Debug)]
+struct Type(String,u32);
+fn main(){
+    let mut t  = Vec::new();
+    let t1 = Type(String::from("str"),32);
+    t.push(t1);
+
+    println!("{:?}",t);
+
+    //初始化
+    let ts :Vec<Type> = vec![Type(String::from("str"),32),Type(String::from("str2"),34)];
+    println!("{:?}",ts);
+}
+
+[Type("str", 32)]
+[Type("str", 32), Type("str2", 34)]
+```
+
+# 24. String
+
+- 基于[]byte的集合
+- rust的核心语言层面，只有一个字符串类型，字符串切片str或者&str
+- 字符串切片，对存储在其他地方、UTF-8编码的字符串的引用
+- ==字符串字面值，存储在二进制中，也是字符串切片==
+- String 是可增长的、可修改的、可拥有的
+- String不是rust的核心语言层面的
+- String是UTF-8类型的
+
+**其他类型的标准库字符串**
+
+- OsString
+- OsStr
+- CString
+- CStr
+
+万般无奈的情况下，只好新设计一套新的字符串类型，用来在做 FFI 接口的时候放弃字符串合法性检查，并把这种允许非法字符存在的编码格式美其名曰——WTF-8。
+
+```
+use std::ffi::OsStr;
+use std::ffi::OsString;
+ 
+fn main() {
+    let a_str: &str = "Hello Str!"; 
+    let an_os_str: &OsStr = OsStr::new(a_str); 
+    println!("{:?}", an_os_str); 
+ 
+    let a_string = String::from("Hello, String!");
+    let an_os_string = OsString::from(a_string); 
+    println!("{:?}", an_os_string); 
+}
+```
+
+
+
+## 24.1 slice
+
+切片并不是 Rust 独有的概念，在 Go 语言中就非常流行，它允许你引用集合中部分连续的元素序列，而不是引用整个集合。
+
+对于字符串而言，切片就是对 `String` 类型中某一部分的引用，它看起来像这样：
+
+```
+#[derive(Debug)]
+struct Type(String,u32);
+fn main(){
+
+  let s : String = String::from("hello world");
+
+//   let word = &s[0..6];
+  let hello = &s[..6];
+  let world = &s[6..];
+
+  println!("hello-{}",hello);
+  println!("world-{}",world)
+
+
+}
+
+hello-hello 
+world-world
+```
+<img width="830" alt="image" src="https://user-images.githubusercontent.com/43371021/231932209-2f1afd9d-e143-42da-9423-967353a77627.png">
+<img width="804" alt="image" src="https://user-images.githubusercontent.com/43371021/231932299-468ea92c-1e6f-492e-b636-deeead6b614d.png">
+<img width="826" alt="image" src="https://user-images.githubusercontent.com/43371021/231932424-dd0ce2fe-9003-49ef-8cd4-c047d7a414aa.png">
+
+## 24.2 字符串字面量是切片
+
+==字符串字面量是编译到二进制中的，因此不可变==
+
+之前提到过字符串字面量,但是没有提到它的类型：
+
+```rust
+let s = "Hello, world!";
+```
+
+实际上，`s` 的类型是 `&str`，因此你也可以这样声明：
+
+```rust
+let s: &str = "Hello, world!";
+```
+
+该切片指向了程序可执行文件中的某个点，这也是为什么字符串字面量是不可变的，因为 `&str` 是一个不可变引用。
+
+
+
+## 24.3 String
+
+**Rust 中的字符是 Unicode 类型，因此每个字符占据 4 个字节内存空间，但是在字符串中不一样，字符串是 UTF-8 编码，也就是字符串中的字符所占的字节数是变化的(1 - 4)**，这样有助于大幅降低字符串所占用的内存空间。
+
+<img width="818" alt="image" src="https://user-images.githubusercontent.com/43371021/231932875-f806aa03-b32a-4449-98e0-658d5f2893fa.png">
+
+## 24.4 String 与 &str 的转换
+
+在之前的代码中，已经见到好几种从 `&str` 类型生成 `String` 类型的操作：
+
+- `String::from("hello,world")`
+- `"hello,world".to_string()` //将&str转为String
+
+那么如何将 `String` 类型转为 `&str` 类型呢？答案很简单，取引用即可：
+
+```
+#[derive(Debug)]
+struct Type(String,u32);
+fn main(){
+
+    let s = String::from("hello world");
+    say(&s[..6]);
+
+    say(s.as_str());
+	
+		//as_str 将String转为 &str
+		//to_String 将String转为&str
+    let str = s.as_str().to_string();
+    println!("{}",str)
+}
+
+fn say(s:&str){
+    println!("say-{}",s)
+}
+
+say-hello 
+say-hello world
+hello world
+```
+## 24.5 [字符串索引](https://course.rs/basic/compound-type/string-slice.html#字符串索引)
+
+在其它语言中，使用索引的方式访问字符串的某个字符或者子串是很正常的行为，但是在 Rust 中就会报错：
+
+```rust
+   let s1 = String::from("hello");
+   let h = s1[0];
+```
+
+该代码会产生如下错误：
+<img width="805" alt="image" src="https://user-images.githubusercontent.com/43371021/231935123-2bbb1498-3290-40fa-ae93-059d72fc37c3.png">
+
+[字符串的不同表现形式](https://course.rs/basic/compound-type/string-slice.html#字符串的不同表现形式)
+
+现在看一下用梵文写的字符串 `“नमस्ते”`, 它底层的字节数组如下形式：
+
+```rust
+[224, 164, 168, 224, 164, 174, 224, 164, 184, 224, 165, 141, 224, 164, 164,
+224, 165, 135]
+```
+
+长度是 18 个字节，这也是计算机最终存储该字符串的形式。如果从字符的形式去看，则是：
+
+```rust
+['न', 'म', 'स', '्', 'त', 'े']
+```
+
+但是这种形式下，第四和六两个字母根本就不存在，没有任何意义，接着再从字母串的形式去看：
+
+```rust
+["न", "म", "स्", "ते"]
+```
+
+所以，可以看出来 Rust 提供了不同的字符串展现方式，这样程序可以挑选自己想要的方式去使用，而无需去管字符串从人类语言角度看长什么样。
+
+还有一个原因导致了 Rust 不允许去索引字符串：因为索引操作，我们总是期望它的性能表现是 O(1)，然而对于 `String` 类型来说，无法保证这一点，因为 Rust 可能需要从 0 开始去遍历字符串来定位合法的字符。
+
+<img width="816" alt="image" src="https://user-images.githubusercontent.com/43371021/231935340-599e0be3-90fe-40ff-8ca9-4f4aa7e1f79b.png">
+
+
+
 
 
 
