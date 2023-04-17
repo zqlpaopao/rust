@@ -3152,7 +3152,7 @@ fn main() {
 ```
 hello rust!
 ```
-	
+
 ### 24.6.6 字符串转义
 我们可以通过转义的方式 \ 输出 ASCII 和 Unicode 字符。
 
@@ -3179,7 +3179,7 @@ fn main() {
     println!("{}", long_string);
 }
 ```
-		 
+
 当然，在某些情况下，可能你会希望保持字符串的原样，不要转义：
 
 ```
@@ -3207,23 +3207,284 @@ fn main() {
 
 
 
+# 26. HashMap
+
+- H a sh M a p<K,V>
+- 所有的K必须是同一个类型
+- 所有的V也必须是同一个类型
+
+```
+use std::collections::HashMap;
+
+fn main(){
+    //type annotations needed for `HashMap<K, V>`
+    //空的是不能推断，会有错误
+    // let mut map =HashMap::new();
+
+    //可以先创建 空的 添加值后会推断出
+    let mut map =HashMap::new();
+
+    //这样不支持
+        // map[String::from("key")] = u8;
+    map.insert(String::from("key"), 8);
+    dbg!(map);
+
+}
+
+[src/main.rs:14] map = {
+    "key": 8,
+}
+```
 
 
 
+**另一种创建collect**
+
+```
+use std::collections::HashMap;
+
+fn main(){
+    let teams  = vec![String::from("blue"),String::from("yellow")];
+    let intial_scores = vec![10,50];
+
+    //前边需要之名返回类型
+    //因为collect会返回很多种的类型数据
+    let scores : HashMap<_,_> = teams.iter().zip(intial_scores.iter()).collect();
+    dbg!(scores);
+
+}
+
+[src/main.rs:8] scores = {
+    "blue": 10,
+    "yellow": 50,
+}
+```
 
 
 
+## 26.1 所有全的移动
+
+```
+use std::collections::HashMap;
+
+fn main(){
+    let field_name = String::from("key");
+
+    let field_value = String::from("value");
+
+    let mut  map = HashMap::new();
+
+    map.insert(field_name, field_value);
+
+    dbg!(map);
+
+    //此时访问
+    //borrow of moved value: `field_name`
+    //因为是heap分配的数据，会发生所有全的移动
+    // println!("{}",field_name);
+
+    // 但是如果是引用类型就是可以的
+
+    let field_name = String::from("key");
+
+    let field_value = String::from("value");
+
+    let mut  map = HashMap::new();
+
+    map.insert(&field_name, &field_value);
+
+    dbg!(map);
+    println!("{}",field_name);
+
+}
+
+[src/main.rs:12] map = {
+    "key": "value",
+}
+[src/main.rs:29] map = {
+    "key": "value",
+}
+key
+```
 
 
 
+## 26.2 获取值
+
+- 可使用map[k]，获取,但是当get不存在的时候会报错
+- 可使用map。get,不存在的时候会返回None
+
+```
+use std::collections::HashMap;
+
+fn main(){
+    let field_name = String::from("key");
+
+    let field_value = String::from("value");
+
+    let mut  map = HashMap::new();
+
+    map.insert(&field_name, &field_value);
+
+    // dbg!(map);
+
+
+    let m1 = map[&field_name];
+    println!("{}",m1);
+    
+    //thread 'main' panicked at 'no entry found for key', src/main.rs:15:14
+		//note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+    let m1 = map[&String::from("value")];
+    println!("{}",m1);
+
+    //没有此方法
+    // let m1 = map[&field_name];
+
+    let m =map.get(&field_name);
+     match m{
+        Some(s)=> println!("{}",s),
+        None=>println!("empty",)
+    };
+    dbg!(m);
+
+}
+
+value
+value
+[src/main.rs:27] m = Some(
+    "value",
+)
+```
 
 
 
+## 26.3 遍历
+
+- 可使用tuple的形式进行遍历获取
+
+```
+use std::collections::HashMap;
+
+fn main(){
+    let field_name = String::from("key");
+
+    let field_value = String::from("value");
+
+    let mut  map = HashMap::new();
+
+    map.insert(&field_name, &field_value);
+
+   for (k,v) in map{
+    println!("{}",k);
+    println!("{}",v);
+   }
+
+}
+
+key
+value
+```
 
 
 
+## 26.4 更新hashmap
+
+![image-20230417211017267](rust-new.assets/image-20230417211017267.png)
+
+**覆盖现有的值**
+
+```
+use std::collections::HashMap;
+
+fn main(){
+    let field_name = String::from("key");
+
+    let field_value = String::from("value");
+
+    let mut  map = HashMap::new();
+
+    map.insert(&field_name, &field_value);
 
 
+    let field_value1 = String::from("kkkk");
+    map.insert(&field_name,&field_value1);
+    dbg!(map);
+
+}
+
+[src/main.rs:15] map = {
+    "key": "kkkk",
+}
+```
+
+
+
+**当值存在不替换**
+
+- entry:检查指定的K是否对应一个V
+- Or_insert 插入值，如果不存在
+
+```
+use std::collections::HashMap;
+
+fn main(){
+    let mut scores = HashMap::new();
+    scores.insert(String::from("blue"), 10);
+
+    let e =scores.entry(String::from("blue"));
+
+    e.or_insert(50);
+    dbg!(scores);
+    //[src/main.rs:10] scores = {
+    //    "blue": 10,
+    //}
+
+    let mut s = HashMap::new();
+    s.insert(String::from("keu"), String::from("value"));
+
+
+    let ec = s.entry(String::from("kes"));
+
+    ec.or_insert(String::from("kkkk"));
+    // dbg!(ec);
+    println!("{:?}",s);
+}
+
+[src/main.rs:10] scores = {
+    "blue": 10,
+}
+{"keu": "value", "kes": "kkkk"}
+```
+
+![image-20230417212926822](rust-new.assets/image-20230417212926822.png)
+
+
+
+**基于现有的值进行更新**
+
+```
+use std::collections::HashMap;
+
+fn main(){
+    let text = "hello world wonderful world";
+
+    let mut map = HashMap::with_capacity(4);
+
+    for word in text.split_whitespace(){
+        let count = map.entry(word).or_insert(0);
+        *count +=1;
+    }
+    print!("{:?}",map)
+}
+
+{"hello": 1, "wonderful": 1, "world": 2}%   
+```
+
+
+
+## 26.5  hash函数-docs攻击
+
+![image-20230417213444644](rust-new.assets/image-20230417213444644.png)
 
 
 
