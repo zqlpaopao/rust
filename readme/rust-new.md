@@ -3488,6 +3488,177 @@ fn main(){
 
 
 
+# 27 rust错误处理概述
+
+- rust可靠性-错误处理
+- 大部分情况下；在编译阶段提示错误，并处理
+
+- 错误氛围可恢复和不可恢复的错误
+
+- **可吹拂的错误Result<F,E>**
+
+
+
+## 27.1 不可恢复的错误
+
+- 打印错误信息及调用栈信息
+- 发生panic的时候沿着调用栈往回走，清理每个遇到的函数，**工作量大**
+- 立即终止程序
+- 内存由os进行回收
+
+
+
+==**想让二进制更小**==
+
+- 在cargo.toml中适当profile的位置设置
+  - panic='about',发生恐慌，立即终止执行，由os进行回收
+
+```
+[package]
+name = "code"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+[profile.release]
+panic = 'abort'
+```
+
+
+
+![image-20230418212311575](rust-new.assets/image-20230418212311575.png)
+
+
+
+## 27.2 RUST_BACKTRACE 追踪错误
+
+![image-20230418212904457](rust-new.assets/image-20230418212904457.png)
+
+
+
+![image-20230418212934042](rust-new.assets/image-20230418212934042.png)
+
+
+
+现实调用的堆栈信息
+
+![image-20230418213138899](rust-new.assets/image-20230418213138899.png)
+
+## 27.3 可恢复的错误Result枚举
+
+![image-20230418213422289](rust-new.assets/image-20230418213422289.png)
+
+```
+
+use std::{fs::File};
+fn main(){
+   let f = File::open("hello.txt");
+
+   let _f = match f {
+       Ok(file)=>file,
+       Err(error)=> match error.kind() {
+           std::io::ErrorKind::NotFound=> match File::create("hello.txt") {
+               Ok(fc)=>fc,
+               Err(e)=>panic!("not found file {:?}",e),
+           },
+           other_err => panic!("error opening file {:?}",other_err),
+       },
+      
+   };
+   
+}
+```
+
+
+
+![image-20230418214246839](rust-new.assets/image-20230418214246839.png)
+
+
+
+
+
+## 27.4 闭包实现 让带阿妹更简洁
+
+![image-20230418214551063](rust-new.assets/image-20230418214551063.png)
+
+```
+
+use std::{fs::File, io::ErrorKind};
+fn main(){
+    let _f = File::open("hello.txt").unwrap_or_else(|error|{
+        if error.kind() == ErrorKind::NotFound{
+            File::create("hello.txt").unwrap_or_else(|error|{
+                panic!("create file is error {:?}",error);
+            })
+        }else{
+            panic!("error open file error {:?}",error);
+        }
+    }) ;
+}
+```
+
+
+
+## 27.5 unwrap
+
+![image-20230418215056111](rust-new.assets/image-20230418215056111.png)
+
+```
+
+use std::{fs::File};
+fn main(){
+    // let f = File::open("hello.txt");
+
+    // let f = match f {
+    //     Ok(file)=>file,
+    //     Err(error)=>panic!("{:?}",error),
+    // };
+
+    //相当于
+    let f = File::open("hello.txt").unwrap();
+
+}
+
+
+```
+
+![image-20230418215359574](rust-new.assets/image-20230418215359574.png)
+
+
+
+## 27.6 expect
+
+![image-20230418215526225](rust-new.assets/image-20230418215526225.png)
+
+```
+
+use std::{fs::File};
+fn main(){
+    // let f = File::open("hello.txt");
+
+    // let f = match f {
+    //     Ok(file)=>file,
+    //     Err(error)=>panic!("{:?}",error),
+    // };
+
+    //相当于
+    let f = File::open("hello.txt").expect("无法打开文件");
+
+}
+```
+
+
+
+![image-20230418215620372](rust-new.assets/image-20230418215620372.png)
+
+
+
+## 27.7 传播错误 ？
+
+- 将错误返回给调用者
 
 
 
@@ -3495,30 +3666,72 @@ fn main(){
 
 
 
+传统的错误
+
+![image-20230418215922211](rust-new.assets/image-20230418215922211.png)
 
 
 
+![image-20230418220037083](rust-new.assets/image-20230418220037083.png)
+
+```
+
+use std::{fs::File};
+use std::io::{self, Read};
+fn main(){
+    
+    let res = read_file();
+    println!("{:?}",res);
+}
+
+fn read_file()->Result<String,io::Error>{
+    let mut f = File::open("hello.txt")?;
+    let mut s =String::with_capacity(100);
+
+    f.read_to_string(&mut s)?;
+    Ok(s)
+}
+```
+
+![image-20230418220621833](rust-new.assets/image-20230418220621833.png)
 
 
 
+## 27.8 ？ from
+
+![image-20230418220757564](rust-new.assets/image-20230418220757564.png)
+
+## 27.8 链式调用
+
+```
+
+use std::{fs::File};
+use std::io::{self, Read};
+fn main(){
+    
+    let res = read_file();
+    println!("{:?}",res);
+}
+
+fn read_file()->Result<String,io::Error>{
+    let mut s =String::with_capacity(100);
+
+    File::open("hello.txt")?.read_to_string(&mut s)?;
+    Ok(s)
+}
+```
+
+![image-20230418220921046](rust-new.assets/image-20230418220921046.png)
 
 
 
+## 27.9 ?只能用于Result<F,E>
+
+![image-20230418221136562](rust-new.assets/image-20230418221136562.png)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+![image-20230418221208003](rust-new.assets/image-20230418221208003.png)
 
 
 
