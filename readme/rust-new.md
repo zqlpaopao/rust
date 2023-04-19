@@ -3737,3 +3737,305 @@ fn read_file()->Result<String,io::Error>{
 
 
 
+# 28 范型
+
+![image-20230419212709459](rust-new.assets/image-20230419212709459.png)
+
+
+
+## 28.1 结构体中使用泛型
+
+```
+#[derive(Debug)]
+#[warn(dead_code)]
+struct Point<T,U>{
+    x :T,
+    y:U,
+}
+fn main(){
+    let int = Point{x:5,y:10.99};
+
+    let float = Point{x:23.3,y:34.5};
+
+    println!("{:#?}",int);
+    println!("{:#?}",float);
+}
+```
+
+
+
+
+
+## 28.2 在enum中使用泛型
+
+![image-20230419213740564](rust-new.assets/image-20230419213740564.png)
+
+```
+
+enum OPtion<T>{
+    Some(T),
+    None,
+}
+enum Result<T,E>{
+    Ok(T),
+    Err(E),
+}
+fn main(){
+   
+}
+```
+
+
+
+
+
+![image-20230419213922568](rust-new.assets/image-20230419213922568.png)
+
+
+
+
+
+## 28.3 泛型struct impl 方法
+
+```
+
+struct Point <T>{
+    x:T,
+    y:T,
+}
+impl <T> Point<T> {
+    
+    fn Add(&self)->&T{
+        &self.x 
+    }
+}
+fn main(){
+    let p = Point{x:3,y:5};
+    let x = p.Add();
+    println!("{}",x)
+}
+```
+
+![image-20230419214708959](rust-new.assets/image-20230419214708959.png)
+
+![image-20230419214739871](rust-new.assets/image-20230419214739871.png)
+
+
+
+
+
+# 29 类型转换
+
+rust提供了一个关键字as
+
+专门用于这样的类型转换
+
+也就是说rust的设计者希望在发生类型转换的时候不是偷偷摸摸进行的
+
+而是显式地标记出来
+
+防止隐藏的bug
+
+```
+
+struct Point {
+    x:i8,
+    pub y:i8,
+}
+impl Point {
+    fn Add(&self,i:i32)->i8{
+       ( self.x + i as *const i8 as i8 )as i8
+    }
+}
+fn main(){
+    let p = Point{x:3,y:5};
+    let x = p.Add(8);
+    println!("{}",x)
+}
+```
+
+
+
+
+
+```
+
+struct Point {
+    x:i8,
+    pub y:i8,
+}
+impl Point {
+    fn Add(&self,i:i32)->i8{
+       ( self.x + i as *const i8 as i8 )as i8
+    }
+}
+fn main(){
+    let s = String::from("8");
+
+    let i = s.parse::<i32>().unwrap();
+
+    let  s = i.to_string();
+}
+```
+
+
+
+
+
+**-----**
+
+```
+
+let int_value = 5;
+//整型转字符串
+let string_value = int_value.to_string();
+
+//字符串转32位有符号整型
+let back_int = string_value.parse::<i32>().unwrap();
+
+// 字符串转32位无符号整型
+let back_int = string_value.parse::<u32>().unwrap();
+
+//字符串转16位有符号整型
+let back_int = string_value.parse::<i16>().unwrap(); 
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
