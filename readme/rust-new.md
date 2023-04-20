@@ -3824,63 +3824,6 @@ fn main(){
 
 
 
-# 29 类型转换
-
-rust提供了一个关键字as
-
-专门用于这样的类型转换
-
-也就是说rust的设计者希望在发生类型转换的时候不是偷偷摸摸进行的
-
-而是显式地标记出来
-
-防止隐藏的bug
-
-```
-
-struct Point {
-    x:i8,
-    pub y:i8,
-}
-impl Point {
-    fn Add(&self,i:i32)->i8{
-       ( self.x + i as *const i8 as i8 )as i8
-    }
-}
-fn main(){
-    let p = Point{x:3,y:5};
-    let x = p.Add(8);
-    println!("{}",x)
-}
-```
-
-
-
-
-
-```
-
-struct Point {
-    x:i8,
-    pub y:i8,
-}
-impl Point {
-    fn Add(&self,i:i32)->i8{
-       ( self.x + i as *const i8 as i8 )as i8
-    }
-}
-fn main(){
-    let s = String::from("8");
-
-    let i = s.parse::<i32>().unwrap();
-
-    let  s = i.to_string();
-}
-```
-
-
-
-
 
 **-----**
 
@@ -4033,9 +3976,67 @@ fn main() {
 }
 ```
 
+# 30 类型转换
+
+rust提供了一个关键字as
+
+专门用于这样的类型转换
+
+也就是说rust的设计者希望在发生类型转换的时候不是偷偷摸摸进行的
+
+而是显式地标记出来
+
+防止隐藏的bug
+
+```
+
+struct Point {
+    x:i8,
+    pub y:i8,
+}
+impl Point {
+    fn Add(&self,i:i32)->i8{
+       ( self.x + i as *const i8 as i8 )as i8
+    }
+}
+fn main(){
+    let p = Point{x:3,y:5};
+    let x = p.Add(8);
+    println!("{}",x)
+}
+```
 
 
-# 30 trait
+
+
+
+```
+
+struct Point {
+    x:i8,
+    pub y:i8,
+}
+impl Point {
+    fn Add(&self,i:i32)->i8{
+       ( self.x + i as *const i8 as i8 )as i8
+    }
+}
+fn main(){
+    let s = String::from("8");
+
+    let i = s.parse::<i32>().unwrap();
+
+    let  s = i.to_string();
+}
+```
+
+
+
+
+
+
+
+
 
 
 
