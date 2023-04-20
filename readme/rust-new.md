@@ -4032,7 +4032,42 @@ fn main(){
 
 
 
+## 28.4 const泛型
 
+[const 详解](https://zh.practice.rs/generics-traits/const-generics.html)
+
+- 定义的语法是 `const N: usize`，表示 const 泛型 `N` ，它基于的值类型是 `usize
+- 目前，const 泛型参数只能使用以下形式的实参:
+  - 一个单独的 const 泛型参数
+  - 一个字面量 (i.e. 整数, 布尔值或字符).
+  - 一个具体的 const 表达式( 表达式中不能包含任何 泛型参数)
+
+![image-20230420174141629](rust-new.assets/image-20230420174141629.png)
+
+## [（Rust 1.51 版本引入的重要特性）](https://course.rs/basic/trait/generic.html#const-泛型rust-151-版本引入的重要特性)
+
+![image-20230420173042867](rust-new.assets/image-20230420173042867.png)
+
+![image-20230420173130556](rust-new.assets/image-20230420173130556.png)
+
+==`N` 就是 const 泛型，定义的语法是 `const N: usize`，表示 const 泛型 `N` ，它基于的值类型是 `usize`。在泛型参数之前，Rust 完全不适合复杂矩阵的运算，自从有了 const 泛型，一切即将改变。==
+
+
+
+# trait--interface
+
+我们也多次见过特征的使用，例如 `#[derive(Debug)]`，它在我们定义的类型(`struct`)上自动派生 `Debug` 特征，接着可以使用 `println!("{:?}", x)` 打印这个类型；再例如：
+
+```
+#![allow(unused)]
+fn add<T: std::ops::Add<Output = T>>(a:T, b:T) -> T {
+    a + b
+}
+```
+
+通过 `std::ops::Add` 特征来限制 `T`，只有 `T` 实现了 `std::ops::Add` 才能进行合法的加法操作，毕竟不是所有的类型都能进行相加。
+
+这些都说明一个道理，特征定义了**一组可以被共享的行为，只要实现了特征，你就能使用这组行为**。
 
 
 
