@@ -3901,6 +3901,142 @@ let back_int = string_value.parse::<i16>().unwrap();
 
 ```
 
+## 28.4 ? Option
+
+`?` 不仅仅可以用于 `Result` 的传播，还能用于 `Option` 的传播，再来回忆下 `Option` 的定义：
+
+```
+fn main() {
+   let vec = vec![1,2,3];
+
+   let zero = add(&vec);
+
+   if zero == None{
+    println!("获取数据空")
+   }
+}
+
+fn add(i : &[i32])-> Option<&i32> {
+    let v = i.get(30)?;
+    Some(v)
+}
+
+获取数据空
+```
+
+上面的函数中，`arr.get` 返回一个 `Option<&i32>` 类型，因为 `?` 的使用，如果 `get` 的结果是 `None`，则直接返回 `None`，如果是 `Some(&i32)`，则把里面的值赋给 `v`。
+
+其实这个函数有些画蛇添足，我们完全可以写出更简单的版本：
+
+```
+fn first(arr: &[i32]) -> Option<&i32> {
+   arr.get(0)
+}
+```
+
+
+
+```
+#![allow(unused)]
+fn main() {
+fn last_char_of_first_line(text: &str) -> Option<char> {
+    text.lines().next()?.chars().last()
+}
+}
+
+```
+
+上面代码展示了在链式调用中使用 `?` 提前返回 `None` 的用法， `.next` 方法返回的是 `Option` 类型：如果返回 `Some(&str)`，那么继续调用 `chars` 方法,如果返回 `None`，则直接从整个函数中返回 `None`，不再继续进行链式调用。
+
+![image-20230420152204250](rust-new.assets/image-20230420152204250.png)
+
+
+
+## 28.5 [带返回值的 main 函数](https://course.rs/basic/result-error/result.html#带返回值的-main-函数)
+
+![image-20230420152500456](rust-new.assets/image-20230420152500456.png)
+
+
+
+## 28.6 try!
+
+![image-20230420153037535](rust-new.assets/image-20230420153037535.png)
+
+# 29 模式守卫与@绑定的互换
+
+把模式守卫改为@绑定
+修改前
+
+```
+fn main() {
+    let num = Some(4);
+    match num {
+        Some(x) if x < 5 => println!("less than five: {}", x),
+        Some(x) => println!("{}", x),
+        None => (),
+    }
+}
+```
+
+修改后
+
+```
+fn main() {
+    let num = Some(4);
+    match num {
+        Some(x @ 0..=5) => println!("less than five: {}", x),
+        Some(x) => println!("{}", x),
+        None => (),
+    }
+}
+```
+
+把@绑定改为模式守卫
+修改前
+
+```
+fn main() {
+    enum Message {
+        Hello { id: i32 },
+    }
+    let msg = Message::Hello { id: 5 };
+    match msg {
+        Message::Hello {
+            id: id_variable @ 3..=7,
+        } => println!("Found an id in range: {}", id_variable),
+        Message::Hello { id: 10..=12 } => {
+            println!("Found an id in another range")
+        }
+        Message::Hello { id } => println!("Found some other id: {}", id),
+    }
+}
+```
+
+
+修改后
+
+```
+fn main() {
+    enum Message {
+        Hello { id: i32 },
+    }
+    let msg = Message::Hello { id: 5 };
+    match msg {
+        Message::Hello { id: id_variable } if (id_variable >= 3 && id_variable <= 7) => {
+            println!("Found an id in range: {}", id_variable)
+        }
+        Message::Hello { id: 10..=12 } => {
+            println!("Found an id in another range")
+        }
+        Message::Hello { id } => println!("Found some other id: {}", id),
+    }
+}
+```
+
+
+
+# 30 trait
+
 
 
 
