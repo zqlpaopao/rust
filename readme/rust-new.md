@@ -4070,6 +4070,736 @@ fn add<T: std::ops::Add<Output = T>>(a:T, b:T) -> T {
 这些都说明一个道理，特征定义了**一组可以被共享的行为，只要实现了特征，你就能使用这组行为**。
 
 
+# 31. trait--interface
+
+我们也多次见过特征的使用，例如 `#[derive(Debug)]`，它在我们定义的类型(`struct`)上自动派生 `Debug` 特征，接着可以使用 `println!("{:?}", x)` 打印这个类型；再例如：
+
+```
+#![allow(unused)]
+fn add<T: std::ops::Add<Output = T>>(a:T, b:T) -> T {
+    a + b
+}
+```
+
+通过 `std::ops::Add` 特征来限制 `T`，只有 `T` 实现了 `std::ops::Add` 才能进行合法的加法操作，毕竟不是所有的类型都能进行相加。
+
+这些都说明一个道理，特征定义了**一组可以被共享的行为，只要实现了特征，你就能使用这组行为**。
+
+## 31.1 定义特征
+
+- 把不同的类型具有相同的行为，定义为一组特征
+
+例如，我们现在有文章 `Post` 和微博 `Weibo` 两种内容载体，而我们想对相应的内容进行总结，也就是无论是文章内容，还是微博内容，都可以在某个时间点进行总结，那么总结这个行为就是共享的，因此可以用特征来定义：
+
+```
+pub trait Summary{
+	fn summary(&self)->String;
+}
+```
+
+这里使用 `trait` 关键字来声明一个特征，`Summary` 是特征名。在大括号中定义了该特征的所有方法，在这个例子中是： `fn summarize(&self) -> String`。
+
+
+
+## 32.2 为类型实现特征
+
+```
+pub trait Summary {
+    fn summary(&self)-> String;
+}
+
+struct WeiBo {
+   pub auther :String,
+   pub title : String,
+   pub content : String,
+}
+
+struct Post{
+    pub username : String,
+    pub text : String,
+}
+
+//结构体关联函数或者方法
+impl Post {
+    fn new(username : String,text : String)->Post{
+        Post { username, text }
+    }
+
+    fn get_username(&self) -> &str{
+        self.username.as_str()
+    }
+}
+
+//实现trait
+impl Summary for WeiBo {
+    fn summary(&self)-> String {
+        format!("作者-{} title-{} 内容-{} ",self.auther,self.title,self.content)
+    }
+}
+
+impl Summary for Post {
+    fn summary(&self)-> String {
+        format!("username-{} text-{}",self.username,self.text)
+    }
+}
+
+fn main(){
+    //调用结构体的关联函数和方法
+    let struct_func = Post::new("username".to_string(), "text".to_string());
+
+    let username = struct_func.get_username();
+    
+    println!("Post-username-{}",username);
+
+    //调用实现Summary trait的 结构体的行为
+
+    let weibo = WeiBo{
+        auther:"zhangSan".to_string(),
+        title:"这是title".to_string(),
+        content:"这是内容".to_string(),
+    };
+
+    let say = weibo.summary();
+    println!("weibo-{}",say);
+
+
+    let post = Post{
+        username:"post-username".to_string(),
+        text:"post-text".to_string(),
+    };
+
+    let post = post.summary();
+    println!("post-summary-{}",post)
+
+}
+
+Post-username-username
+weibo-作者-zhangSan title-这是title 内容-这是内容 
+post-summary-username-post-username text-post-text
+```
+
+- 可以看到实现了Summary的类型，都会应有对应Summary的行为
+
+## 32.3 [特征定义与实现的位置(孤儿规则)](https://course.rs/basic/trait/trait.html#特征定义与实现的位置孤儿规则)
+
+![image-20230421144700469](rust-new.assets/image-20230421144700469.png)
+
+
+
+## 32.3 默认实现方法
+
+```
+pub trait Summary {
+    fn summary_auther(&self)->String;
+
+    fn summary(&self){
+        println!(" trait Summary");
+        self.summary_auther();
+    }
+}
+
+struct WeiBo {
+   pub auther :String,
+   pub title : String,
+   pub content : String,
+}
+
+struct Post{
+    pub username : String,
+    pub text : String,
+}
+
+//实现trait
+impl Summary for WeiBo {
+    fn summary_auther(&self)-> String {
+        format!("作者-{} title-{} 内容-{} ",self.auther,self.title,self.content)
+    }
+    //重载summary
+    fn summary(&self) {
+        println!("这是weibo对summary的重载实现")
+    }
+}
+
+impl Summary for Post {
+    fn summary_auther(&self)-> String {
+        format!("username-{} text-{}",self.username,self.text)
+    }
+}
+
+fn main(){
+    
+    //调用实现Summary trait的 结构体的行为
+
+    let weibo = WeiBo{
+        auther:"zhangSan".to_string(),
+        title:"这是title".to_string(),
+        content:"这是内容".to_string(),
+    };
+
+    //默认实现Summary的类型都会继承默认实现内容
+
+    //weibo 实现了重载
+    let say = weibo.summary_auther();
+    println!("weibo-{}",say);
+    weibo.summary();
+    
+
+
+    let post = Post{
+        username:"post-username".to_string(),
+        text:"post-text".to_string(),
+    };
+
+    let say = post.summary_auther();
+    println!("post-summary-{}",say);
+    post.summary();
+
+
+}
+
+
+
+weibo-作者-zhangSan title-这是title 内容-这是内容 
+这是weibo对summary的重载实现
+post-summary-username-post-username text-post-text
+ trait Summary
+
+```
+
+![image-20230421151048329](rust-new.assets/image-20230421151048329.png)
+
+## 32.4 [使用特征作为函数参数](https://course.rs/basic/trait/trait.html#使用特征作为函数参数)
+
+之前提到过，特征如果仅仅是用来实现方法，那真的有些大材小用，现在我们来讲下，真正可以让特征大放光彩的地方。
+
+现在，先定义一个函数，使用特征作为函数参数：
+
+```
+fn apply(item : &impl Summary){
+    item.summary();
+    item.summary_auther();
+}
+```
+
+![image-20230421151519253](rust-new.assets/image-20230421151519253.png)
+
+
+
+## 32.5 [特征约束(trait bound)](https://course.rs/basic/trait/trait.html#特征约束trait-bound)
+
+- 作为参数传入的形式是`impl Summary`
+- 也可以使用特征绑定
+
+```
+pub fn apply<T : Summary>(item:T){
+	
+}
+```
+
+此处的`T： Summary`就是特征绑定
+
+![image-20230421152433346](rust-new.assets/image-20230421152433346.png)
+
+
+
+## 32.6 多重约束
+
+除了单个约束条件，我们还可以指定多个约束条件，例如除了让参数实现 `Summary` 特征外，还可以让参数实现 `Display` 特征以控制它的格式化输出：
+
+```
+fn apply(item : &(impl Summary + Display)){
+	
+}
+
+或者
+fn apply<T : (Summary + Display)>(item : &T){
+	
+}
+```
+
+
+
+## 32.7 where
+
+```
+fn some_impl<T:Summary + Display,U : Summary + Copy> (item:&T,item2 : &U){
+
+}
+
+fn some_imple<T,U>()
+    where   T : Summary+Display,
+            U : Summary+Copy,
+{
+    
+}
+```
+
+![image-20230421153107091](rust-new.assets/image-20230421153107091.png)
+
+
+
+## 32.8 结构体泛型的方法实现约束
+
+```
+use std::fmt::Display;
+struct Point<T>{
+    x:T,
+    y:T
+}
+
+impl <T :Display+PartialOrd>Point<T> {
+    fn com(&self){
+        if self.x >self.y{
+            println!("x > y")
+        }else{
+            println!("x < y")
+        }
+    }
+}
+```
+
+![image-20230421153930177](rust-new.assets/image-20230421153930177.png)
+
+
+
+## 32.9 作为返回参数
+
+![image-20230421154428441](rust-new.assets/image-20230421154428441.png)
+
+==**注意trait bound 是不能作为参数返回的使用的**==
+
+
+
+![image-20230421154537450](rust-new.assets/image-20230421154537450.png)
+
+
+
+是可以调用返回的Summary类型的函数
+
+```
+pub trait Summary {
+    fn summary_auther(&self)->String;
+
+    fn summary(&self){
+        println!(" trait Summary");
+        self.summary_auther();
+    }
+}
+
+#[derive(Debug)]
+struct WeiBo {
+   pub auther :String,
+   pub title : String,
+   pub content : String,
+}
+
+struct Post{
+    pub username : String,
+    pub text : String,
+}
+
+//实现trait
+impl Summary for WeiBo {
+    fn summary_auther(&self)-> String {
+        format!("作者-{} title-{} 内容-{} ",self.auther,self.title,self.content)
+    }
+    //重载summary
+    fn summary(&self) {
+        println!("这是weibo对summary的重载实现")
+    }
+}
+
+impl Summary for Post {
+    fn summary_auther(&self)-> String {
+        format!("username-{} text-{}",self.username,self.text)
+    }
+}
+
+
+fn new_summary_post<T : Summary>(item : T)-> impl Summary{
+   item
+}
+
+fn main(){
+
+    let post_t = new_summary_post(WeiBo{
+        auther:"zhangSan".to_string(),
+        title:"这是title".to_string(),
+        content:"这是内容".to_string(),
+    });
+
+    println!("{:?}",post_t.summary());
+
+   
+
+}
+
+这是weibo对summary的重载实现
+()
+```
+
+
+
+## 32.10 [修复上一节中的 `largest` 函数](https://course.rs/basic/trait/trait.html#修复上一节中的-largest-函数)
+
+还记得上一节中的[例子](https://course.rs/basic/trait/generic.html#泛型详解)吧，当时留下一个疑问，该如何解决编译报错：
+
+```rust
+error[E0369]: binary operation `>` cannot be applied to type `T` // 无法在 `T` 类型上应用`>`运算符
+ --> src/main.rs:5:17
+  |
+5 |         if item > largest {
+  |            ---- ^ ------- T
+  |            |
+  |            T
+  |
+help: consider restricting type parameter `T` // 考虑使用以下的特征来约束 `T`
+  |
+1 | fn largest<T: std::cmp::PartialOrd>(list: &[T]) -> T {
+  |             ^^^^^^^^^^^^^^^^^^^^^^
+```
+
+在 `largest` 函数体中我们想要使用大于运算符（`>`）比较两个 `T` 类型的值。这个运算符是标准库中特征 `std::cmp::PartialOrd` 的一个默认方法。所以需要在 `T` 的特征约束中指定 `PartialOrd`，这样 `largest` 函数可以用于内部元素类型可比较大小的数组切片。
+
+由于 `PartialOrd` 位于 `prelude` 中所以并不需要通过 `std::cmp` 手动将其引入作用域。所以可以将 `largest` 的签名修改为如下：
+
+```rust
+fn largest<T: PartialOrd>(list: &[T]) -> T {}
+```
+
+但是此时编译，又会出现新的错误：
+
+```rust
+error[E0508]: cannot move out of type `[T]`, a non-copy slice
+ --> src/main.rs:2:23
+  |
+2 |     let mut largest = list[0];
+  |                       ^^^^^^^
+  |                       |
+  |                       cannot move out of here
+  |                       help: consider using a reference instead: `&list[0]`
+
+error[E0507]: cannot move out of borrowed content
+ --> src/main.rs:4:9
+  |
+4 |     for &item in list.iter() {
+  |         ^----
+  |         ||
+  |         |hint: to prevent move, use `ref item` or `ref mut item`
+  |         cannot move out of borrowed content
+```
+
+错误的核心是 `cannot move out of type [T], a non-copy slice`，原因是 `T` 没有[实现 `Copy` 特性](https://course.rs/basic/ownership/ownership.html#拷贝浅拷贝)，因此我们只能把所有权进行转移，毕竟只有 `i32` 等基础类型才实现了 `Copy` 特性，可以存储在栈上，而 `T` 可以指代任何类型（严格来说是实现了 `PartialOrd` 特征的所有类型）。
+
+因此，为了让 `T` 拥有 `Copy` 特性，我们可以增加特征约束：
+
+```rust
+fn largest<T: PartialOrd + Copy>(list: &[T]) -> T {
+    let mut largest = list[0];
+
+    for &item in list.iter() {
+        if item > largest {
+            largest = item;
+        }
+    }
+
+    largest
+}
+
+fn main() {
+    let number_list = vec![34, 50, 25, 100, 65];
+
+    let result = largest(&number_list);
+    println!("The largest number is {}", result);
+
+    let char_list = vec!['y', 'm', 'a', 'q'];
+
+    let result = largest(&char_list);
+    println!("The largest char is {}", result);
+}
+```
+
+如果并不希望限制 `largest` 函数只能用于实现了 `Copy` 特征的类型，我们可以在 `T` 的特征约束中指定 [`Clone` 特征](https://course.rs/basic/ownership/ownership.html#克隆深拷贝) 而不是 `Copy` 特征。并克隆 `list` 中的每一个值使得 `largest` 函数拥有其所有权。使用 `clone` 函数意味着对于类似 `String` 这样拥有堆上数据的类型，会潜在地分配更多堆上空间，而堆分配在涉及大量数据时可能会相当缓慢。
+
+另一种 `largest` 的实现方式是返回在 `list` 中 `T` 值的引用。如果我们将函数返回值从 `T` 改为 `&T` 并改变函数体使其能够返回一个引用，我们将不需要任何 `Clone` 或 `Copy` 的特征约束而且也不会有任何的堆分配。尝试自己实现这种替代解决方式吧！
+
+![image-20230421161341924](rust-new.assets/image-20230421161341924.png)
+
+
+
+## 32.11 [为自定义类型实现 `+` 操作](https://course.rs/basic/trait/trait.html#为自定义类型实现--操作)
+
+```
+use std::ops::Add;
+
+#[derive(Debug)]
+struct Point<T : Add<T,Output = T>>{
+    x:T,
+    y:T,
+}
+
+impl <T : Add<T,Output = T>> Add for Point<T> {
+    type Output = Point<T>;
+
+    fn add(self, rhs: Self) -> Point<T> {
+        Point{
+            x:self.x+rhs.x,
+            y:self.y+rhs.y,
+        }
+        
+    }
+}
+
+fn add<T: Add<T ,Output = T>>(a : T,b :T)->T{
+    a+b
+}
+
+fn main(){
+    let f1 = Point{
+        x:1.0f32,
+        y:2.0f32,
+    };
+    let f2 = Point{
+        x:1.0f32,
+        y:2.0f32,
+    };
+
+    let f = add(f1, f2);
+    println!("{:?}",f);
+}
+
+Point { x: 2.0, y: 4.0 }
+```
+
+
+
+## 32.12 [自定义类型的打印输出](https://course.rs/basic/trait/trait.html#自定义类型的打印输出)
+
+![image-20230421163202854](rust-new.assets/image-20230421163202854.png)
+
+# 32 trait 特征对象
+
+
+
+==**特征对象**指向实现了 `Draw` 特征的类型的实例，也就是指向了 `Button` 或者 `SelectBox` 的实例，这种映射关系是存储在一张表中，可以在运行时通过特征对象找到具体调用的类型方法。可以通过 `&` 引用或者 `Box<T>` 智能指针的方式来创建特征对象。==
+
+
+
+## 32.1 dyn
+
+**dyn是trait对象类型的前缀**
+
+==dyn关键字用于强调相关trait的方法是动态分配的。==要以这种方式使用trait，它必须是“对象安全”的。
+
+与泛型参数或植入型特质不同，编译器不知道被传递的具体类型。也就是说，该类型已经被抹去。因此，**一个dyn Trait引用包含两个指针。一个指针指向数据（例如，一个结构的实例）。另一个指针指向方法调用名称与函数指针的映射（被称为虚拟方法表各vtable）。**
+
+==impl trait 和 dyn trait 在Rust分别被称为静态分发和动态分发，即当代码涉及多态时，需要某种机制决定实际调动类型。==
+
+![image-20230421165342409](rust-new.assets/image-20230421165342409.png)
+
+
+
+![image-20230421165518574](rust-new.assets/image-20230421165518574.png)
+
+
+
+
+
+
+
+![image-20230421170319335](rust-new.assets/image-20230421170319335.png)
+
+
+
+```
+pub trait Draw {
+    fn draw(&self)->String;
+}
+
+impl Draw for u8{
+    fn draw(&self) ->String{
+        println!("u8 - {}",self);
+        format!("{}",self)
+    }
+}
+
+impl Draw for f64 {
+    fn draw(&self)->String {
+        println!("f64 - {}",self);
+        format!("{}",self)
+    }
+}
+
+fn draw1(x : &dyn Draw){
+    x.draw();
+}
+
+// 若 T 实现了 Draw 特征， 则调用该函数时传入的 Box<T> 可以被隐式转换成函数参数签名中的 Box<dyn Draw>
+fn draw2(x : Box<dyn Draw>){
+    // 由于实现了 Deref 特征，Box 智能指针会自动解引用为它所包裹的值，然后调用该值对应的类型上定义的 `draw` 方法
+    x.draw();
+}
+
+fn main(){
+    let f = 45.67f64;
+    let u = 8u8;
+
+    draw1(&f);
+    draw1(&u);
+
+    // x 和 y 的类型 T 都实现了 `Draw` 特征，因为 Box<T> 可以在函数调用时隐式地被转换为特征对象 Box<dyn Draw> 
+    // 基于 x 的值创建一个 Box<f64> 类型的智能指针，指针指向的数据被放置在了堆上
+    draw2(Box::new(f));
+    draw2(Box::new(u));
+    
+}
+
+f64 - 45.67
+u8 - 8
+f64 - 45.67
+u8 - 8
+```
+
+- `draw1` 函数的参数是 `Box<dyn Draw>` 形式的特征对象，该特征对象是通过 `Box::new(x)` 的方式创建的
+- `draw2` 函数的参数是 `&dyn Draw` 形式的特征对象，该特征对象是通过 `&x` 的方式创建的
+- ==`dyn` 关键字只用在特征对象的类型声明上，在创建时无需使用 `dyn`==
+
+
+
+```
+pub trait Draw {
+    fn draw(&self)->String;
+}
+
+impl Draw for u8{
+    fn draw(&self) ->String{
+        println!("u8 - {}",self);
+        format!("{}",self)
+    }
+}
+
+impl Draw for f64 {
+    fn draw(&self)->String {
+        println!("f64 - {}",self);
+        format!("{}",self)
+    }
+}
+
+pub struct Screen {
+    pub components: Vec<Box<dyn Draw>>,
+    //missing lifetime specifier
+    //dyn 是动态分配不知道类型的时候来确定的
+    // pub components : Vec<&dyn Draw>,
+}
+
+impl Screen {
+    fn run (&self){
+        for item in self.components.iter(){
+            item.draw();
+        }
+    }
+}
+
+// fn draw1(x : &dyn Draw){
+//     x.draw();
+// }
+
+// // 若 T 实现了 Draw 特征， 则调用该函数时传入的 Box<T> 可以被隐式转换成函数参数签名中的 Box<dyn Draw>
+// fn draw2(x : Box<dyn Draw>){
+//     // 由于实现了 Deref 特征，Box 智能指针会自动解引用为它所包裹的值，然后调用该值对应的类型上定义的 `draw` 方法
+//     x.draw();
+// }
+
+fn main(){
+    let f = 45.67f64;
+    let u = 8u8;
+
+   let vec = Screen{
+    components : vec![Box::new(f),Box::new(u)],
+   };
+
+   vec.run()
+    
+}
+
+f64 - 45.67
+u8 - 8
+```
+
+
+
+## 32.2 dyn 和&dyn区别
+
+![image-20230421173030427](rust-new.assets/image-20230421173030427.png)
+
+
+
+![image-20230421173350574](rust-new.assets/image-20230421173350574.png)
+
+![image-20230421173603185](rust-new.assets/image-20230421173603185.png)
+
+
+
+## 32.3 self 和Self
+
+- self 是调用者本身
+- Self 在谁的作用域内就是谁
+
+```
+trait Draw {
+    //此时是Drwa
+    fn draw(&self) -> Self;
+}
+
+#[derive(Clone)]
+struct Button;
+impl Draw for Button {
+    //此时的Self 不是 Draw 是Button
+    fn draw(&self) -> Self {
+        return self.clone()
+    }
+}
+
+fn main() {
+    let button = Button;
+    let newb = button.draw();
+}
+
+```
+
+上述代码中，`self`指代的就是当前的实例对象，也就是 `button.draw()` 中的 `button` 实例，`Self` 则指代的是 `Button` 类型。
+
+当理解了 `self` 与 `Self` 的区别后，我们再来看看何为对象安全。
+
+## 32.4 [特征对象的限制](https://course.rs/basic/trait/trait-object.html#特征对象的限制)
+
+不是所有特征都能拥有特征对象，只有对象安全的特征才行。当一个特征的所有方法都有如下属性时，它的对象才是安全的：
+
+- **方法的返回类型不能是 `Self`**
+- 方法没有任何泛型参数
+
+![image-20230421174311705](rust-new.assets/image-20230421174311705.png)
+
+# 33 深入trait
+
+## 33.1 关联类型
+
+关联类型是在特征定义的语句块中，申明一个自定义类型，这样就可以在特征的方法签名中使用该类型：
+
+```
+pub trait Iterator {
+    type Item;
+
+    fn next(&mut self) -> Option<Self::Item>;
+}
+```
+
+![image-20230421175203960](rust-new.assets/image-20230421175203960.png)
+
+
+
+## 33.2 [默认泛型类型参数](https://course.rs/basic/trait/advance-trait.html#默认泛型类型参数)
+
 
 
 
