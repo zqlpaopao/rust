@@ -4799,6 +4799,165 @@ pub trait Iterator {
 
 
 ## 33.2 [默认泛型类型参数](https://course.rs/basic/trait/advance-trait.html#默认泛型类型参数)
+## 33.2 [默认泛型类型参数](https://course.rs/basic/trait/advance-trait.html#默认泛型类型参数)
+
+```
+trait Add<RHF=Self> {
+    type Item;
+    fn add(&self,other:RHF)->Self::Item;
+}
+```
+
+![image-20230423174120994](rust-new.assets/image-20230423174120994.png)
+
+
+
+**不同类型相加**
+
+```
+use std::ops::Add;
+
+#[derive(Debug)]
+struct Millmeters(u32);
+struct Meter(u32);
+
+impl Add<Meter> for Millmeters {
+    type Output = Millmeters;
+    fn add(self,other:Meter)->Self::Output{
+        Millmeters(self.0 + (other.0*10000))
+    }
+}
+
+fn main(){
+    let m = Millmeters(43);
+    let mm = Meter(5);
+
+    let m1 = m.add(mm);
+
+    println!("{:?}",m1)
+}
+
+Millmeters(50043)
+```
+
+![image-20230423174841741](rust-new.assets/image-20230423174841741.png)
+
+
+
+## 33.3 调用自己和特征的同名方法-self方法
+
+- 调用首先回调调用自己的方法
+- 调用实现特征的方法要告诉是调用的哪个特征
+
+```
+特征::方法名(实现的实体)
+```
+
+
+
+```
+struct Drive;
+
+trait  Man{
+    fn drive(&self);
+}
+
+trait Woman {
+    fn drive(&self);
+}
+
+impl Man for Drive {
+    fn drive(&self) {
+        println!("man-drive")
+    }
+}
+
+impl Woman for Drive {
+    fn drive(&self) {
+        println!("woman-drive")
+    }
+}
+
+impl Drive {
+    fn drive(&self){
+        println!("self")
+    }
+}
+
+fn main(){
+   let d = Drive;
+
+   //调用自己的方法
+   d.drive();
+
+   //调用特征上的方法
+   Man::drive(&d);
+
+   Woman::drive(&d)
+
+}
+
+self
+man-drive
+woman-drive
+```
+
+
+
+## 33.4 完全限定语法-关联方法
+
+- 调用自己的方法使用::方法名就可以
+- 调用特征的关联函数使用完全限定
+
+```
+<实现特征的类型 as 被实现的特征>::特征关联函数();
+```
+
+
+
+这个时候问题又来了，如果方法没有 `self` 参数呢？稍等，估计有读者会问：还有方法没有 `self` 参数？看到这个疑问，作者的眼泪不禁流了下来，大明湖畔的[关联函数](https://course.rs/basic/method.html#关联函数)，你还记得嘛？
+
+但是成年人的世界，就算再伤心，事还得做，咱们继续：
+
+```
+trait Animai {
+    fn baby_name();
+}
+
+struct Dog;
+
+impl Animai for Dog {
+    fn baby_name() {
+        println!("impl - animal - dog")
+    }
+}
+
+impl Dog {
+    fn baby_name(){
+        println!("self dog")
+    }
+}
+
+fn main(){
+
+    //调用关联方法用::
+    //调用方法用. 含有self的
+    Dog::baby_name();
+
+
+    //调用特征同名的关联函数
+    //argument of type `&Dog` unexpected
+    // Animai::baby_name(&d);
+
+    //使用as 完全限定方法
+    <Dog as Animai>::baby_name();
+
+}
+
+self dog
+impl - animal - dog
+```
+
 
 
 
