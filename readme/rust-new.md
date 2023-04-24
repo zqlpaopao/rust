@@ -4960,6 +4960,75 @@ impl - animal - dog
 
 
 
+# 34 生命周期
+
+## 34.1 [生命周期标注语法](https://course.rs/basic/lifetime.html#生命周期标注语法)
+
+生命周期的语法也颇为与众不同，以 `'` 开头，名称往往是一个单独的小写字母，大多数人都用 `'a` 来作为生命周期的名称。 如果是引用类型的参数，那么生命周期会位于引用符号 `&` 之后，并用一个空格来将生命周期和引用参数分隔开:
+
+```
+&i32        // 一个引用
+&'a i32     // 具有显式生命周期的引用
+&'a mut i32 // 具有显式生命周期的可变引用
+
+```
+
+![image-20230424174820881](rust-new.assets/image-20230424174820881.png)
+
+
+
+## 34.2 函数中的生命周期标注
+
+![image-20230424180004398](rust-new.assets/image-20230424180004398.png)
+
+
+
+![image-20230424180324376](rust-new.assets/image-20230424180324376.png)
+
+
+
+![image-20230424180721208](rust-new.assets/image-20230424180721208.png)
+
+
+
+## 34.3 [结构体中的生命周期](https://course.rs/basic/lifetime.html#结构体中的生命周期)
+
+![image-20230424181421644](rust-new.assets/image-20230424181421644.png)
+
+
+
+## 34.4 [生命周期消除](https://course.rs/basic/lifetime.html#生命周期消除)
+
+![image-20230424181826097](rust-new.assets/image-20230424181826097.png)
+
+
+
+![image-20230424182108812](rust-new.assets/image-20230424182108812.png)
+
+![image-20230424182245107](rust-new.assets/image-20230424182245107.png)
+
+```
+error[E0106]: missing lifetime specifier
+ --> src/main.rs:1:47
+  |
+1 | fn longest<'a, 'b>(x: &'a str, y: &'b str) -> &str {
+  |                       -------     -------     ^ expected named lifetime parameter
+  |
+  = help: this function's return type contains a borrowed value, but the signature does not say whether it is borrowed from `x` or `y`
+note: these named lifetimes are available to use
+ --> src/main.rs:1:12
+  |
+1 | fn longest<'a, 'b>(x: &'a str, y: &'b str) -> &str {
+  |            ^^  ^^
+help: consider using one of the available lifetimes here
+  |
+1 | fn longest<'a, 'b>(x: &'a str, y: &'b str) -> &'lifetime str {
+  |                                                +++++++++
+
+```
+
+## 34.5 [方法中的生命周期](https://course.rs/basic/lifetime.html#方法中的生命周期)
+
 
 
 
