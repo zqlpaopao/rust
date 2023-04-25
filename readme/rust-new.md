@@ -5029,6 +5029,86 @@ help: consider using one of the available lifetimes here
 
 ## 34.5 [方法中的生命周期](https://course.rs/basic/lifetime.html#方法中的生命周期)
 
+定义
+
+```
+struct ImportantExcerpt<'a>{
+    port : &'a str,
+}
+
+//impl 中必须使用结构体的完整名称，包括 <'a>，因为生命周期标注也是结构体类型的一部分！
+// 方法签名中，往往不需要标注生命周期，得益于生命周期消除的第一和第三规则
+impl<'a> ImportantExcerpt<'a> {
+    fn get_port(&self)->i32{
+        3
+    }
+    
+}
+```
+
+![image-20230425163410446](rust-new.assets/image-20230425163410446.png)
+
+
+
+## 34.6 生命周期对比标注
+
+```
+struct ImportantExcerpt<'a>{
+    port : &'a str,
+}
+
+//impl 中必须使用结构体的完整名称，包括 <'a>，因为生命周期标注也是结构体类型的一部分！
+// 方法签名中，往往不需要标注生命周期，得益于生命周期消除的第一和第三规则
+impl<'a:'b,'b> ImportantExcerpt<'a> {
+    fn get_port(&'a self,others :&'b str)->&'b str{
+        //lifetime may not live long enough
+        others
+    }
+    
+}
+
+fn main(){
+
+}
+```
+
+
+
+![image-20230425163810874](rust-new.assets/image-20230425163810874.png)
+
+![image-20230425163524969](rust-new.assets/image-20230425163524969.png)
+
+
+
+## 34.7 static 静态生命周期
+
+![image-20230425164200372](rust-new.assets/image-20230425164200372.png)
+
+
+
+## 34.8 和泛型一起使用
+
+```
+struct Str<'a,T>{
+    port : &'a str,
+    other : T
+}
+
+fn set<'a,T>(x : &'a str,b :&'a str,ann : T)->&'a str
+where T : std::fmt::Display,
+{
+    println!("{}",ann);
+    if x.len() > b.len(){
+        x
+    }else{
+        b
+    }
+}
+
+fn main(){}
+```
+
+
 
 
 
