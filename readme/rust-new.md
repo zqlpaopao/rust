@@ -5109,7 +5109,564 @@ fn main(){}
 ```
 
 
+# 35 格式化输出
 
+## 35.1 [`print!`，`println!`，`format!`](https://course.rs/basic/formatted-output.html#printprintlnformat)
+
+它们是 Rust 中用来格式化输出的三大金刚，用途如下：
+
+- `print!` 将格式化文本输出到标准输出，不带换行符
+- `println!` 同上，但是在行的末尾添加换行符
+- `format!` 将格式化文本输出到 `String` 字符串
+
+## 35.2 [{} 与 {:?}](https://course.rs/basic/formatted-output.html#-与-)
+
+与 `{}` 类似，`{:?}` 也是占位符：
+
+- `{}` 适用于实现了 `std::fmt::Display` 特征的类型，用来以更优雅、更友好的方式格式化文本，例如展示给用户
+- `{:?}` 适用于实现了 `std::fmt::Debug` 特征的类型，用于调试场景
+
+其实两者的选择很简单，当你在写代码需要调试时，使用 `{:?}`，剩下的场景，选择 `{}`。
+
+## 35.3 [`Debug` 特征](https://course.rs/basic/formatted-output.html#debug-特征)
+
+事实上，为了方便我们调试，大多数 Rust 类型都实现了 `Debug` 特征或者支持派生该特征：
+
+```rust
+#[derive(Debug)]
+struct Person {
+    name: String,
+    age: u8
+}
+
+fn main() {
+    let i = 3.1415926;
+    let s = String::from("hello");
+    let v = vec![1, 2, 3];
+    let p = Person{name: "sunface".to_string(), age: 18};
+    println!("{:?}, {:?}, {:?}, {:?}", i, s, v, p);
+}
+```
+
+对于数值、字符串、数组，可以直接使用 `{:?}` 进行输出，但是对于结构体，需要[派生`Debug`](https://course.rs/appendix/derive.html)特征后，才能进行输出，总之很简单。
+
+## 35.4 [`Display` 特征](https://course.rs/basic/formatted-output.html#display-特征)
+
+与大部分类型实现了 `Debug` 不同，实现了 `Display` 特征的 Rust 类型并没有那么多，往往需要我们自定义想要的格式化方式：
+
+```rust
+let i = 3.1415926;
+let s = String::from("hello");
+let v = vec![1, 2, 3];
+let p = Person {
+    name: "sunface".to_string(),
+    age: 18,
+};
+println!("{}, {}, {}, {}", i, s, v, p);
+```
+
+运行后可以看到 `v` 和 `p` 都无法通过编译，因为没有实现 `Display` 特征，但是你又不能像派生 `Debug` 一般派生 `Display`，只能另寻他法：
+
+- 使用 `{:?}` 或 `{:#?}`
+- 为自定义类型实现 `Display` 特征
+- 使用 `newtype` 为外部类型实现 `Display` 特征
+
+下面来一一看看这三种方式。
+
+## 35.5 [{:#?}](https://course.rs/basic/formatted-output.html#)
+
+`{:#?}` 与 `{:?}` 几乎一样，唯一的区别在于它能更优美地输出内容：
+
+```console
+// {:?}
+[1, 2, 3], Person { name: "sunface", age: 18 }
+
+// {:#?}
+[
+    1,
+    2,
+    3,
+], Person {
+    name: "sunface",
+}
+```
+
+因此对于 `Display` 不支持的类型，可以考虑使用 `{:#?}` 进行格式化，虽然理论上它更适合进行调试输出。
+
+
+
+## 36.6 为自定义类型实现Display
+
+```
+struct Person {
+    name: String,
+    age: u8,
+}
+
+use std::fmt;
+impl fmt::Display for Person {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "大佬在上，请受我一拜，小弟姓名{}，年芳{}，家里无田又无车，生活苦哈哈",
+            self.name, self.age
+        )
+    }
+}
+fn main() {
+    let p = Person {
+        name: "sunface".to_string(),
+        age: 18,
+    };
+    println!("{}", p);
+}
+
+大佬在上，请受我一拜，小弟姓名sunface，年芳18，家里无田又无车，生活苦哈哈
+```
+
+## 36.7 [为外部类型实现 `Display` 特征](https://course.rs/basic/formatted-output.html#为外部类型实现-display-特征)
+
+```
+struct Array(Vec<i32>);
+
+use std::fmt;
+impl fmt::Display for Array {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "数组是：{:?}", self.0)
+    }
+}
+fn main() {
+    let arr = Array(vec![1, 2, 3]);
+    println!("{}", arr);
+}
+数组是：[1, 2, 3]
+```
+
+## 36.8 [位置参数](https://course.rs/basic/formatted-output.html#位置参数)
+
+除了按照依次顺序使用值去替换占位符之外，还能让指定位置的参数去替换某个占位符，例如 `{1}`，表示用第二个参数替换该占位符(索引从 0 开始)：
+
+```rust
+fn main() {
+    println!("{}{}", 1, 2); // =>"12"
+    println!("{1}{0}", 1, 2); // =>"21"
+    // => Alice, this is Bob. Bob, this is Alice
+    println!("{0}, this is {1}. {1}, this is {0}", "Alice", "Bob");
+    println!("{1}{}{0}{}", 1, 2); // => 2112
+}
+```
+
+## 36.9 [具名参数](https://course.rs/basic/formatted-output.html#具名参数)
+
+除了像上面那样指定位置外，我们还可以为参数指定名称：
+
+```rust
+fn main() {
+    println!("{argument}", argument = "test"); // => "test"
+    println!("{name} {}", 1, name = 2); // => "2 1"
+    println!("{a} {c} {b}", a = "a", b = 'b', c = 3); // => "a 3 b"
+}
+```
+
+需要注意的是：**带名称的参数必须放在不带名称参数的后面**，例如下面代码将报错：
+
+```rust
+println!("{abc} {1}", abc = "def", 2);
+error: positional arguments cannot follow named arguments
+ --> src/main.rs:4:36
+   |
+ 4 | println!("{abc} {1}", abc = "def", 2);
+   |                             -----  ^ positional arguments must be before named arguments
+   |                             |
+   |                             named argument
+```
+
+## 36.10 [格式化参数](https://course.rs/basic/formatted-output.html#格式化参数)
+
+格式化输出，意味着对输出格式会有更多的要求，例如只输出浮点数的小数点后两位：
+
+```rust
+fn main() {
+    let v = 3.1415926;
+    // Display => 3.14
+    println!("{:.2}", v);
+    // Debug => 3.14
+    println!("{:.2?}", v);
+}
+```
+
+上面代码只输出小数点后两位。同时我们还展示了 `{}` 和 `{:?}` 的用法，后面如无特殊区别，就只针对 `{}` 提供格式化参数说明。
+
+接下来，让我们一起来看看 Rust 中有哪些格式化参数。
+
+
+
+## 36.11 宽度
+
+```
+fn main() {
+    //-----------------------------------
+    // 以下全部输出 "Hello x    !"
+    // 为"x"后面填充空格，补齐宽度5
+    println!("Hello {:5}!", "x");
+    // 使用参数5来指定宽度
+    println!("Hello {:1$}!", "x", 5);
+    // 使用x作为占位符输出内容，同时使用5作为宽度
+    println!("Hello {1:0$}!", 5, "x");
+    // 使用有名称的参数作为宽度
+    println!("Hello {:width$}!", "x", width = 5);
+    //-----------------------------------
+
+    // 使用参数5为参数x指定宽度，同时在结尾输出参数5 => Hello x    !5
+    println!("Hello {:1$}!{}", "x", 5);
+}
+
+Hello x    !
+Hello x    !
+Hello x    !
+Hello x    !
+Hello x    !5
+```
+
+#### [数字填充:符号和 0](https://course.rs/basic/formatted-output.html#数字填充符号和-0)
+
+数字格式化默认也是使用空格进行填充，但与字符串左对齐不同的是，数字是右对齐。
+
+```rust
+fn main() {
+    // 宽度是5 => Hello     5!
+    println!("Hello {:5}!", 5);
+    // 显式的输出正号 => Hello +5!
+    println!("Hello {:+}!", 5);
+    // 宽度5，使用0进行填充 => Hello 00005!
+    println!("Hello {:05}!", 5);
+    // 负号也要占用一位宽度 => Hello -0005!
+    println!("Hello {:05}!", -5);
+}
+```
+
+### [对齐](https://course.rs/basic/formatted-output.html#对齐)
+
+```rust
+fn main() {
+    // 以下全部都会补齐5个字符的长度
+    // 左对齐 => Hello x    !
+    println!("Hello {:<5}!", "x");
+    // 右对齐 => Hello     x!
+    println!("Hello {:>5}!", "x");
+    // 居中对齐 => Hello   x  !
+    println!("Hello {:^5}!", "x");
+
+    // 对齐并使用指定符号填充 => Hello x&&&&!
+    // 指定符号填充的前提条件是必须有对齐字符
+    println!("Hello {:&<5}!", "x");
+}
+```
+
+### [精度](https://course.rs/basic/formatted-output.html#精度)
+
+精度可以用于控制浮点数的精度或者字符串的长度
+
+```rust
+fn main() {
+    let v = 3.1415926;
+    // 保留小数点后两位 => 3.14
+    println!("{:.2}", v);
+    // 带符号保留小数点后两位 => +3.14
+    println!("{:+.2}", v);
+    // 不带小数 => 3
+    println!("{:.0}", v);
+    // 通过参数来设定精度 => 3.1416，相当于{:.4}
+    println!("{:.1$}", v, 4);
+
+    let s = "hi我是Sunface孙飞";
+    // 保留字符串前三个字符 => hi我
+    println!("{:.3}", s);
+    // {:.*}接收两个参数，第一个是精度，第二个是被格式化的值 => Hello abc!
+    println!("Hello {:.*}!", 3, "abcdefg");
+}
+```
+
+### [进制](https://course.rs/basic/formatted-output.html#进制)
+
+可以使用 `#` 号来控制数字的进制输出：
+
+- `#b`, 二进制
+- `#o`, 八进制
+- `#x`, 小写十六进制
+- `#X`, 大写十六进制
+- `x`, 不带前缀的小写十六进制
+
+```rust
+fn main() {
+    // 二进制 => 0b11011!
+    println!("{:#b}!", 27);
+    // 八进制 => 0o33!
+    println!("{:#o}!", 27);
+    // 十进制 => 27!
+    println!("{}!", 27);
+    // 小写十六进制 => 0x1b!
+    println!("{:#x}!", 27);
+    // 大写十六进制 => 0x1B!
+    println!("{:#X}!", 27);
+
+    // 不带前缀的十六进制 => 1b!
+    println!("{:x}!", 27);
+
+    // 使用0填充二进制，宽度为10 => 0b00011011!
+    println!("{:#010b}!", 27);
+}
+```
+
+### [指数](https://course.rs/basic/formatted-output.html#指数)
+
+```rust
+fn main() {
+    println!("{:2e}", 1000000000); // => 1e9
+    println!("{:2E}", 1000000000); // => 1E9
+}
+```
+
+### [指针地址](https://course.rs/basic/formatted-output.html#指针地址)
+
+```rust
+let v= vec![1, 2, 3];
+println!("{:p}", v.as_ptr()) // => 0x600002324050
+```
+
+### [转义](https://course.rs/basic/formatted-output.html#转义)
+
+有时需要输出 `{`和`}`，但这两个字符是特殊字符，需要进行转义：
+
+```rust
+fn main() {
+    // "{{" 转义为 '{'   "}}" 转义为 '}'   "\"" 转义为 '"'
+    // => Hello "{World}" 
+    println!(" Hello \"{{World}}\" ");
+
+    // 下面代码会报错，因为占位符{}只有一个右括号}，左括号被转义成字符串的内容
+    // println!(" {{ Hello } ");
+    // 也不可使用 '\' 来转义 "{}"
+    // println!(" \{ Hello \} ")
+}
+```
+
+## [在格式化字符串时捕获环境中的值（Rust 1.58 新增）](https://course.rs/basic/formatted-output.html#在格式化字符串时捕获环境中的值rust-158-新增)
+
+在以前，想要输出一个函数的返回值，你需要这么做：
+
+```rust
+fn get_person() -> String {
+    String::from("sunface")
+}
+fn main() {
+    let p = get_person();
+    println!("Hello, {}!", p);                // implicit position
+    println!("Hello, {0}!", p);               // explicit index
+    println!("Hello, {person}!", person = p);
+}
+```
+
+问题倒也不大，但是一旦格式化字符串长了后，就会非常冗余，而在 1.58 后，我们可以这么写：
+
+```rust
+fn get_person() -> String {
+    String::from("sunface")
+}
+fn main() {
+    let person = get_person();
+    println!("Hello, {person}!");
+}
+```
+
+是不是清晰、简洁了很多？甚至还可以将环境中的值用于格式化参数:
+
+```rust
+let (width, precision) = get_format();
+for (name, score) in get_scores() {
+  println!("{name}: {score:width$.precision$}");
+}
+```
+
+但也有局限，它只能捕获普通的变量，对于更复杂的类型（例如表达式），可以先将它赋值给一个变量或使用以前的 `name = expression` 形式的格式化参数。 目前除了 `panic!` 外，其它接收格式化参数的宏，都可以使用新的特性。对于 `panic!` 而言，如果还在使用 `2015版本` 或 `2018版本`，那 `panic!("{ident}")` 依然会被当成 正常的字符串来处理，同时编译器会给予 `warn` 提示。而对于 `2021版本` ，则可以正常使用:
+
+```rust
+fn get_person() -> String {
+    String::from("sunface")
+}
+fn main() {
+    let person = get_person();
+    panic!("Hello, {person}!");
+}
+```
+
+输出:
+
+```console
+thread 'main' panicked at 'Hello, sunface!', src/main.rs:6:5
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+```
+
+
+
+# 37 实现一个文件匹配
+
+## 37.1 接受传入参数
+
+```
+cargo run -- searchstring example-filename.txt
+-- 告诉 cargo 后面的参数是给我们的程序使用的，而不是给 cargo 自己使用，例如 -- 前的 run 就是给它用的。
+```
+
+## 37.2 [使用环境变量来增强程序](https://course.rs/basic-practice/envs.html#使用环境变量来增强程序)
+
+在上一章节中，留下了一个悬念，该如何实现用户控制的大小写敏感，其实答案很简单，你在其它程序中肯定也遇到过不少，例如如何控制 `panic` 后的栈展开？ Rust 提供的解决方案是通过命令行参数来控制:
+
+```shell
+RUST_BACKTRACE=1 cargo run
+```
+
+与之类似，我们也可以使用环境变量来控制大小写敏感，例如:
+
+```shell
+IGNORE_CASE=1 cargo run -- to poem.txt
+```
+
+既然有了目标，那么一起来看看该如何实现吧。
+
+# 38 目录结构
+
+![image-20230426180318972](rust-new.assets/image-20230426180318972.png)
+
+# 39 [&'static 和 T: 'static](https://course.rs/advance/lifetime/static.html#static-和-t-static)
+
+`'static` 在 Rust 中是相当常见的，例如字符串字面值就具有 `'static` 生命周期:
+
+`'static` 在 Rust 中是相当常见的，例如字符串字面值就具有 `'static` 生命周期:
+
+```rust
+fn main() {
+  let mark_twain: &str = "Samuel Clemens";
+  print_author(mark_twain);
+}
+fn print_author(author: &'static str) {
+  println!("{}", author);
+}
+```
+
+除此之外，特征对象的生命周期也是 `'static`，例如[这里](https://course.rs/compiler/fight-with-compiler/lifetime/closure-with-static.html#特征对象的生命周期)所提到的。
+
+除此之外，特征对象的生命周期也是 `'static`，例如[这里](https://course.rs/compiler/fight-with-compiler/lifetime/closure-with-static.html#特征对象的生命周期)所提到的。
+
+除了 `&'static` 的用法外，我们在另外一种场景中也可以见到 `'static` 的使用:
+
+```rust
+use std::fmt::Display;
+fn main() {
+    let mark_twain = "Samuel Clemens";
+    print(&mark_twain);
+}
+
+fn print<T: Display + 'static>(message: &T) {
+    println!("{}", message);
+}
+```
+
+在这里，很明显 `'static` 是作为生命周期约束来使用了。 **那么问题来了， `&'static` 和 `T: 'static` 的用法到底有何区别？**
+
+## 39.1 [`&'static`](https://course.rs/advance/lifetime/static.html#static)
+
+`&'static` 对于生命周期有着非常强的要求：一个引用必须要活得跟剩下的程序一样久，才能被标注为 `&'static`。
+
+对于字符串字面量来说，它直接被打包到二进制文件中，永远不会被 `drop`，因此它能跟程序活得一样久，自然它的生命周期是 `'static`。
+
+==但是，**`&'static` 生命周期针对的仅仅是引用，而不是持有该引用的变量，对于变量来说，还是要遵循相应的作用域规则** :==
+
+![image-20230426183411245](rust-new.assets/image-20230426183411245.png)
+
+上面代码有两点值得注意：
+
+- `&'static` 的引用确实可以和程序活得一样久，因为我们通过 `get_str_at_location` 函数直接取到了对应的字符串
+- 持有 `&'static` 引用的变量，它的生命周期受到作用域的限制，大家务必不要搞混了
+
+
+
+## 39.2 [`T: 'static`](https://course.rs/advance/lifetime/static.html#t-static)
+
+相比起来，这种形式的约束就有些复杂了。
+
+首先，在以下两种情况下，`T: 'static` 与 `&'static` 有相同的约束：`T` 必须活得和程序一样久。
+
+![image-20230426183541788](rust-new.assets/image-20230426183541788.png)
+
+
+
+```
+use std::fmt::Display;
+
+fn main() {
+  let r1;
+  let r2;
+  {
+    static STATIC_EXAMPLE: i32 = 42;
+    r1 = &STATIC_EXAMPLE;
+    let x = "&'static str";
+    r2 = x;
+    // r1 和 r2 持有的数据都是 'static 的，因此在花括号结束后，并不会被释放
+  }
+
+  println!("&'static i32: {}", r1); // -> 42
+  println!("&'static str: {}", r2); // -> &'static str
+
+  let r3: &str;
+
+  {
+    let s1 = "String".to_string();
+
+    // s1 虽然没有 'static 生命周期，但是它依然可以满足 T: 'static 的约束
+    // 充分说明这个约束是多么的弱。。
+    static_bound(&s1);
+
+    // s1 是 String 类型，没有 'static 的生命周期，因此下面代码会报错
+    r3 = &s1;
+
+    // s1 在这里被 drop
+  }
+  println!("{}", r3);
+}
+
+fn static_bound<T: Display + 'static>(t: &T) {
+  println!("{}", t);
+}
+
+```
+
+
+
+![image-20230426183716155](rust-new.assets/image-20230426183716155.png)
+
+
+
+# 40 [闭包 Closure](https://course.rs/advance/functional-programing/closure.html#闭包-closure)
+
+闭包是**一种匿名函数，它可以赋值给变量也可以作为参数传递给其它函数，不同于函数的是，它允许捕获调用者作用域中的值**，例如：
+
+```rust
+fn main() {
+   let x = 1;
+   let sum = |y| x + y;
+
+    assert_eq!(3, sum(2));
+}
+```
+
+上面的代码展示了非常简单的闭包 `sum`，它拥有一个入参 `y`，同时捕获了作用域中的 `x` 的值，因此调用 `sum(2)` 意味着将 2（参数 `y`）跟 1（`x`）进行相加,最终返回它们的和：`3`。
+
+可以看到 `sum` 非常符合闭包的定义：可以赋值给变量，允许捕获调用者作用域中的值。
+
+
+
+![image-20230426184345477](rust-new.assets/image-20230426184345477.png)
 
 
 
