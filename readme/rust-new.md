@@ -6037,6 +6037,84 @@ fn main(){
 
 
 
+# 41 迭代器Iterator
+
+## 41.1 [惰性初始化](https://course.rs/advance/functional-programing/iterator.html#惰性初始化)
+
+```
+fn main(){
+  let vec = vec![1,2,3,4];
+
+  let vec_itor = vec.into_iter();
+  println!("{:?}",vec_itor);
+
+  for i in vec_itor.into_iter(){
+    println!("{}",i)
+  }
+}
+
+IntoIter([1, 2, 3, 4])
+1
+2
+3
+4
+```
+
+在 `for` 循环之前，我们只是简单的==创建了一个迭代器 `v1_iter`，此时不会发生任何迭代行为，只有在 `for` 循环开始后，迭代器才会开始迭代其中的元素，最后打印出来。==
+
+这种惰性初始化的方式确保了创建迭代器不会有任何额外的==性能损耗==，其中的元素也不会被消耗，只有使用到该迭代器的时候，一切才开始。
+
+
+
+## 41.2 next
+
+```
+fn main(){
+  let arr = [1,2,3];
+
+  let mut arr_itor = arr.into_iter();
+
+  assert_eq!(arr_itor.next(),Some(1));
+  assert_eq!(arr_itor.next(),Some(2));
+  assert_eq!(arr_itor.next(),Some(3));
+}
+```
+
+
+
+![image-20230427150559602](rust-new.assets/image-20230427150559602.png)
+
+![image-20230427150737483](rust-new.assets/image-20230427150737483.png)
+
+
+
+**实现Initorator**
+
+```
+fn main(){
+  let arr = [1,2,3];
+
+  let result = match IntoIterator::into_iter(arr){
+    mut itor => loop{
+      match itor.next(){
+        Some(v)=>{println!("{}",v)},
+        None =>break,
+      }
+    },
+  };
+}
+```
+
+
+
+## 41.3 [into_iter, iter, iter_mut](https://course.rs/advance/functional-programing/iterator.html#into_iter-iter-iter_mut)
+
+在之前的代码中，我们统一使用了 `into_iter` 的方式将数组转化为迭代器，除此之外，还有 `iter` 和 `iter_mut`，聪明的读者应该大概能猜到这三者的区别：
+
+- ==`into_iter` 会夺走所有权==
+- ==`iter` 是借用==
+- ==`iter_mut` 是可变借用==
+
 
 
 
