@@ -5671,7 +5671,369 @@ fn main() {
 
 
 
+## 40.1 闭包的形式
 
+```
+#![allow(unused)]
+fn main() {
+
+   fn  add_one_v1   (x: u32) -> u32 { x + 1 }
+
+   let add_one_v2 = |x: u32| -> u32 { x + 1 };
+
+   let add_one_v3 = |x|             { x + 1 };
+   
+   let add_one_v4 = |x|               x + 1  ;
+}
+
+
+```
+
+
+
+## 40.2 struct中的闭包
+
+```
+struct Cache<T>{
+   query :T,
+   value:Option<u32>,
+}
+
+impl <T> Cache<T> 
+   where T : Fn(u32)->u32,
+{
+   fn new(query:T)->Cache<T>{
+      Cache { query, value: None ,}
+   }
+    
+   fn query(&mut self,args:u32)->u32{
+      match self.value {
+          Some(v)=>v,
+          None=> {
+            let v = (self.query)(args);
+            self.value = Some(v);
+            v
+          }
+      }
+   }
+}
+
+fn main() {
+    
+}
+
+
+
+```
+
+
+
+**实现泛型**
+
+```
+struct Cache<T,E>{
+  query:T,
+  value:Option<E>
+}
+
+impl <T,E> Cache<T,E> 
+where T: Fn(E)->E,
+{
+    fn new(query:T)->Cache<T,E>{
+      Cache { query: query
+        , value: None }
+    }
+
+    fn value(&mut self,query:E)->&Option<E>{
+      match &self.value {
+          Some(_)=>&self.value,
+          None=>{
+            let v = (self.query)(query);
+            self.value = Some(v);
+            &self.value
+          }
+      }
+    }
+}
+
+
+fn main(){
+  let fs = |e|->String {e};
+
+  let mut ch = Cache::new(fs);
+
+  if let Some(f) = ch.value(String::from("value")) {
+     println!("{}",f)
+  }
+
+  let function = |a| -> String { a };
+  
+  let mut cach= Cache::new(function);
+  
+  if let Some(a) = cach.value(String::from("a")) {
+      println!("{}", a)
+  }
+  
+
+}
+
+value
+a
+```
+
+
+
+![image-20230427111611078](rust-new.assets/image-20230427111611078.png)
+
+
+
+## 40.3 捕获 作用域的值
+
+![image-20230427112107529](rust-new.assets/image-20230427112107529.png)
+
+## 40.4 [闭包对内存的影响](https://course.rs/advance/functional-programing/closure.html#闭包对内存的影响)
+
+当闭包从环境中捕获一个值时，会分配内存去存储这些值。对于有些场景来说，这种额外的内存分配会成为一种负担。与之相比，函数就不会去捕获这些环境值，因此定义和使用函数不会拥有这种内存负担。
+
+
+
+## 40.5 [三种 Fn 特征](https://course.rs/advance/functional-programing/closure.html#三种-fn-特征)
+
+闭包捕获变量有三种途径，恰好对应函数参数的三种传入方式：转移所有权、可变借用、不可变借用，因此相应的 `Fn` 特征也有三种：
+
+
+
+### 40.5.1 FnOnce
+
+#### [三种 Fn 的关系](https://course.rs/advance/functional-programing/closure.html#三种-fn-的关系)
+
+实际上，一个闭包并不仅仅实现某一种 `Fn` 特征，规则如下：
+
+- 所有的闭包都自动实现了 `FnOnce` 特征，因此任何一个闭包都至少可以被调用一次
+- 没有移出所捕获变量的所有权的闭包自动实现了 `FnMut` 特征
+- 不需要对捕获变量进行改变的闭包自动实现了 `Fn` 特征
+
+1. ==`FnOnce`，该类型的闭包会拿走被捕获变量的所有权。`Once` 顾名思义，说明该闭包只能运行一次：==
+
+```
+fn func<F>(fns:F)
+where F: FnOnce(usize)->bool,
+{
+  println!("{}",fns(3));
+  //use of moved value: `fns`
+  println!("{}",fns(4))
+}
+
+
+fn main(){
+  let f = |x|->bool{true};
+
+  func(f);
+}
+```
+
+![image-20230427112838158](rust-new.assets/image-20230427112838158.png)
+
+**仅**实现 `FnOnce` 特征的闭包在调用时会转移所有权，所以显然不能对已失去所有权的闭包变量进行二次调用：
+
+```
+2 | fn func<F>(fns:F)
+  |            --- move occurs because `fns` has type `F`, which does not implement the `Copy` trait
+...
+5 |   println!("{}",fns(3));
+  |                 ------ `fns` moved due to this call
+6 |   //use of moved value: `fns`
+7 |   println!("{}",fns(4))
+  |                 ^^^ value used here after move
+  |
+```
+
+
+
+![image-20230427113209312](rust-new.assets/image-20230427113209312.png)
+
+
+
+### 40.5.2 FnMut
+
+==`FnMut`，它以可变借用的方式捕获了环境中的值，因此可以修改该值：==
+
+```
+fn main(){
+  let mut st = String::from("hello ");
+
+  let mut clusor = ||{
+    st.push_str("string");
+  };
+  //cannot mutate immutable variable `clusor`rust-analyzerneed-mut
+  //cannot borrow `clusor` as mutable, as it is not declared as mutable   
+  clusor();
+
+
+  println!("{}",st);
+}
+
+hello string
+```
+
+
+
+![image-20230427114003614](rust-new.assets/image-20230427114003614.png)
+
+![image-20230427114203959](rust-new.assets/image-20230427114203959.png)
+
+
+
+## 40.5.3 Fn
+
+==`Fn` 特征，它以不可变借用的方式捕获环境中的值 让我们把上面的代码中 `exec` 的 `F` 泛型参数类型修改为 `Fn(&'a str)`：==
+
+![image-20230427115500220](rust-new.assets/image-20230427115500220.png)
+
+
+
+```
+fn main(){
+  let mut str = String::from("hello");
+
+  // ^^^^ this closure implements `FnMut`, not `Fn`   
+  let colour = |sr|{
+     println!("{}",sr)
+  };
+  exec(colour)
+}
+
+fn exec<'a,F: Fn(&'a str)>(f:F){
+  f("word")
+}
+
+word
+
+正确代码
+
+```
+
+
+
+实际上，一个闭包并不仅仅实现某一种 `Fn` 特征，规则如下：
+
+- 所有的闭包都自动实现了 `FnOnce` 特征，因此任何一个闭包都至少可以被调用一次
+- 没有移出所捕获变量的所有权的闭包自动实现了 `FnMut` 特征
+- 不需要对捕获变量进行改变的闭包自动实现了 `Fn` 特征
+
+三种关系
+
+```
+fn main(){
+  let mut str = String::from("hello");
+
+  let c = ||{
+    println!("{}",str);
+  };
+  exec(c);
+  exec1(c);
+  exec2(c);
+}
+
+
+fn exec<F:Fn()>(f:F){
+  f()
+}
+
+fn exec1<F:FnOnce()>(f:F){
+  f()
+}
+
+fn exec2<F:FnMut()>(mut f:F){
+  f()
+}
+```
+
+
+
+![image-20230427120358049](rust-new.assets/image-20230427120358049.png)
+
+## 40.6 move转移所有权到其他线程
+
+```
+use std::thread;
+fn main(){
+  let vec = vec![1,2,3];
+  let f = thread::spawn(
+    move || {
+      println!("{:?}",vec)
+    }
+  );
+
+  f.join().unwrap();
+
+  //borrow of moved value: `vec`
+  // value borrowed here after moverustcClick for full compiler diagnostic
+  println!("{:?}",vec);
+}
+```
+
+
+
+![image-20230427113512011](rust-new.assets/image-20230427113512011.png)
+
+
+
+![image-20230427115743040](rust-new.assets/image-20230427115743040.png)
+
+
+
+## 40.7 闭包作为返回值
+
+```
+#![allow(unused)]
+
+//rait objects must include the `dyn` keywordr
+fn factory() ->  impl Fn(i32) -> i32 {
+    let num = 5;
+
+    //是所有权的转让
+    |x| x + num
+    move  |x| x + num
+}
+
+//rait objects must include the `dyn` keywordr
+fn factory1(x :i32) -> Box<dyn  Fn(i32) -> i32>  {
+  let num = 5;
+
+  //是所有权的转让
+  // |x| x + num
+ 
+  let num = 5;
+
+  //expected closure, found a different closure
+  if x > 1{
+     Box::new(move |x| x + num)
+  } else {
+     Box::new( move |x| x - num)
+  }
+}
+
+
+
+
+
+
+fn main(){
+  let f = factory();
+
+  let answer = f(1);
+  assert_eq!(6, answer);
+  
+}
+
+```
+
+
+
+![image-20230427141947881](rust-new.assets/image-20230427141947881.png)
+
+![image-20230427142242289](rust-new.assets/image-20230427142242289.png)
 
 
 
