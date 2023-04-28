@@ -6115,6 +6115,218 @@ fn main(){
 - ==`iter` 是借用==
 - ==`iter_mut` 是可变借用==
 
+![image-20230428101407786](rust-new.assets/image-20230428101407786.png)
+
+#### [Iterator 和 IntoIterator 的区别](https://course.rs/advance/functional-programing/iterator.html#iterator-和-intoiterator-的区别)
+
+这两个其实还蛮容易搞混的，但我们只需要记住，`Iterator` 就是迭代器特征，只有实现了它才能称为迭代器，才能调用 `next`。
+
+而 `IntoIterator` 强调的是某一个类型如果实现了该特征，它可以通过 `into_iter`，`iter` 等方法变成一个迭代器。
+
+
+
+## 41.4 消费者与适配器
+
+![image-20230428101722813](rust-new.assets/image-20230428101722813.png)
+
+
+
+### 41.4.1迭代器
+
+- 适配器会调用next消费数据
+- 迭代器是惰性的，需要适配器来驱动
+
+```
+fn main(){
+
+  //可变迭代
+  let  vec = vec![1,2,3,4];
+
+  let res :Vec<i32>= vec.iter().map(|x|x+1).collect();
+  println!("{:?}",res);
+  println!("{:?}",vec)
+}
+
+[2, 3, 4, 5]
+[1, 2, 3, 4]
+```
+
+![image-20230428102221127](rust-new.assets/image-20230428102221127.png)
+
+
+
+## 41.5 collect 和zip
+
+#### [collect](https://course.rs/advance/functional-programing/iterator.html#collect)
+
+上面代码中，使用了 `collect` 方法，该方法就是一个消费者适配器，使用它可以将一个迭代器中的元素收集到指定类型中，**这里我们为 `v2` 标注了 `Vec<_>` 类型，就是为了告诉 `collect`：请把迭代器中的元素消费掉，然后把值收集成 `Vec<_>` 类型，至于为何使用 `_`，因为编译器会帮我们自动推导。**
+
+为何 `collect` 在消费时要指定类型？是因为该方法其实很强大，可以收集成多种不同的集合类型，`Vec<T>` 仅仅是其中之一，因此我们必须显式的告诉编译器我们想要收集成的集合类型。
+
+还有一点值得注意，`map` 会对迭代器中的每一个值进行一系列操作，然后把该值转换成另外一个新值，该操作是通过闭包 `|x| x + 1` 来完成：最终迭代器中的每个值都增加了 `1`，从 `[1, 2, 3]` 变为 `[2, 3, 4]`。
+
+再来看看如何使用 `collect` 收集成 `HashMap` 集合：
+
+```
+use std::collections::HashMap;
+
+fn main(){
+
+
+  //是以最短的自动进行匹配
+  let  key = vec![1,2,3,4];
+
+  let val = vec![String::from("a"),String::from("b")];
+
+  let res: HashMap<_,_>= key.iter().zip(val.iter()).collect();
+
+  println!("{:?}",res);
+
+  let res :HashMap<_,_> = val.iter().zip(key.iter()).collect();
+
+  println!("{:?}",res);
+
+}
+
+{2: "b", 1: "a"}
+{"a": 1, "b": 2}
+```
+
+`zip` 是一个迭代器适配器，它的作用就是将两个迭代器的内容压缩到一起，形成 `Iterator<Item=(ValueFromA, ValueFromB)>` 这样的新的迭代器，在此处就是形如 `[(name1, age1), (name2, age2)]` 的迭代器。
+
+然后再通过 `collect` 将新迭代器中`(K, V)` 形式的值收集成 `HashMap<K, V>`，同样的，这里必须显式声明类型，然后 `HashMap` 内部的 `KV` 类型可以交给编译器去推导，最终编译器会推导出 `HashMap<&str, i32>`，完全正确！
+
+## 41.6 闭包作为适配器参数
+
+#### [闭包作为适配器参数](https://course.rs/advance/functional-programing/iterator.html#闭包作为适配器参数)
+
+之前的 `map` 方法中，我们使用闭包来作为迭代器适配器的参数，它最大的好处不仅在于可以就地实现迭代器中元素的处理，还在于可以捕获环境值：
+
+```rust
+struct Shoe {
+    size: u32,
+    style: String,
+}
+
+fn shoes_in_size(shoes: Vec<Shoe>, shoe_size: u32) -> Vec<Shoe> {
+    shoes.into_iter().filter(|s| s.size == shoe_size).collect()
+}
+```
+
+`filter` 是迭代器适配器，用于对迭代器中的每个值进行过滤。 它使用闭包作为参数，该闭包的参数 `s` 是来自迭代器中的值，然后使用 `s` 跟外部环境中的 `shoe_size` 进行比较，若相等，则在迭代器中保留 `s` 值，若不相等，则从迭代器中剔除 `s` 值，最终通过 `collect` 收集为 `Vec<Shoe>` 类型。
+
+
+
+## 41.7 实现迭代器功能
+
+![image-20230428104941803](rust-new.assets/image-20230428104941803.png)
+
+
+
+## 41.8 enumerate 获取遍历的key及value
+
+```
+#![allow(unused)]
+
+use std::process::id;
+fn main() {
+  let v = vec![1u64, 2, 3, 4, 5, 6];
+  
+  let val = v.iter().
+  enumerate().
+  //filter是对数据进行过滤行为的
+  filter(|&(idx,_)|idx %2 == 0).
+  //map是对数据进行操作的 返回新数据
+  map(|(_,val)|val * 3 ).
+  fold(0u64, |sum, acm|{
+    println!("{:?}",acm);
+    sum *2
+  } );
+
+  println!("{:?}",val);
+}
+3
+9
+15
+0
+```
+
+
+
+## 41.9 [迭代器的性能](https://course.rs/advance/functional-programing/iterator.html#迭代器的性能)
+
+
+
+前面提到，要完成集合遍历，既可以使用 `for` 循环也可以使用迭代器，那么二者之间该怎么选择呢，性能有多大差距呢？
+
+理论分析不会有结果，直接测试最为靠谱：
+
+```rust
+#![feature(test)]
+
+extern crate rand;
+extern crate test;
+
+fn sum_for(x: &[f64]) -> f64 {
+    let mut result: f64 = 0.0;
+    for i in 0..x.len() {
+        result += x[i];
+    }
+    result
+}
+
+fn sum_iter(x: &[f64]) -> f64 {
+    x.iter().sum::<f64>()
+}
+
+#[cfg(test)]
+mod bench {
+    use test::Bencher;
+    use rand::{Rng,thread_rng};
+    use super::*;
+
+    const LEN: usize = 1024*1024;
+
+    fn rand_array(cnt: u32) -> Vec<f64> {
+        let mut rng = thread_rng();
+        (0..cnt).map(|_| rng.gen::<f64>()).collect()
+    }
+
+    #[bench]
+    fn bench_for(b: &mut Bencher) {
+        let samples = rand_array(LEN as u32);
+        b.iter(|| {
+            sum_for(&samples)
+        })
+    }
+
+    #[bench]
+    fn bench_iter(b: &mut Bencher) {
+        let samples = rand_array(LEN as u32);
+        b.iter(|| {
+            sum_iter(&samples)
+        })
+    }
+}
+```
+
+上面的代码对比了 `for` 循环和迭代器 `iterator` 完成同样的求和任务的性能对比，可以看到迭代器还要更快一点。
+
+```console
+test bench::bench_for  ... bench:     998,331 ns/iter (+/- 36,250)
+test bench::bench_iter ... bench:     983,858 ns/iter (+/- 44,673)
+```
+
+迭代器是 Rust 的 **零成本抽象**（zero-cost abstractions）之一，意味着抽象并不会引入运行时开销，这与 `Bjarne Stroustrup`（C++ 的设计和实现者）在 `Foundations of C++（2012）` 中所定义的 **零开销**（zero-overhead）如出一辙：
+
+> In general, C++ implementations obey the zero-overhead principle: What you don’t use, you don’t pay for. And further: What you do use, you couldn’t hand code any better.
+>
+> 一般来说，C++的实现遵循零开销原则：没有使用时，你不必为其买单。 更进一步说，需要使用时，你也无法写出更优的代码了。 （翻译一下：用就完事了）
+
+总之，迭代器是 Rust 受函数式语言启发而提供的高级语言特性，可以写出更加简洁、逻辑清晰的代码。编译器还可以通过循环展开（Unrolling）、向量化、消除边界检查等优化手段，使得迭代器和 `for` 循环都有极为高效的执行效率。
+
+所以请放心大胆的使用迭代器，在获得更高的表达力的同时，也不会导致运行时的损失，何乐而不为呢！
+
 
 
 
