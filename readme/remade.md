@@ -6327,6 +6327,640 @@ test bench::bench_iter ... bench:     983,858 ns/iter (+/- 44,673)
 
 所以请放心大胆的使用迭代器，在获得更高的表达力的同时，也不会导致运行时的损失，何乐而不为呢！
 
+# 42 类型转换
+
+不要将大转小 否则会因为长度的不同，导致精度丢失
+
+## 42.1 使用as 类型转换
+
+```rust
+fn main() {
+    let a = 16_i16;
+    let b : u8 = 8;
+
+    if a > (b as i16) {
+      println!("a > b")
+    }
+  
+  let  a = String::from("222");
+
+  //non-primitive cast: `String` as `i16`
+   let b = a as i16;
+   println!("{}",b)
+}
+```
+
+
+
+```
+fn main() {
+    let i16_max = i16::MAX;
+    println!("i16-max{}",i16_max);
+
+    let f = 31.32 as u8;
+    let a = 'a' as u8;
+    println!("{}-{}",f,a)
+}
+
+i16-max32767
+31-97
+```
+
+
+
+## 42.2 内存地址转换指针
+
+```
+fn main() {
+   let mut a :[i32;2] = [1,2];
+   let ptr = a.as_mut_ptr();
+   let num = ptr as usize; //i32 占用4个字节
+
+   let num1 = num +4;
+
+   let num2 = num1 as *mut i32;
+   unsafe{
+    *num2 += 1;
+   }
+   println!("{}",a[1])
+
+
+}
+
+3
+```
+
+
+
+==转换不具有传递性 就算 `e as U1 as U2` 是合法的，也不能说明 `e as U2` 是合法的（`e` 不能直接转换成 `U2`）。==
+
+
+
+## 42.3 tryInto
+
+不可以实现String -> number的转换
+
+```
+use  std::convert::TryInto;
+fn main() {
+  let a = 45_u32;
+
+  let b:i8 = a.try_into().unwrap();
+  println!("{}",b);
+
+  //  let  a = String::from("222");
+
+  //non-primitive cast: `String` as `i16`
+  //the trait bound `i16: From<String>` is not satisfied
+  //the following other types implement trait `From<T>`:
+  // <i16 as From<NonZeroI16>>
+  // <i16 as From<bool>>
+  // <i16 as From<i8>>
+  // <i16 as From<u8>>
+  // required for `String` to implement `Into<i16>`
+  // required for `i16` to implement `TryFrom<String>`
+  // required for `String` to implement `TryInto<i16>`
+   let b : i16 = a.try_into().unwrap();
+   println!("{}",b)
+
+
+}
+45
+45
+```
+
+
+
+```
+use  std::convert::TryInto;
+fn main() {
+  let a = 45_u32;
+
+  let b:i8 = a.try_into().unwrap();
+  println!("{}",b);
+
+
+
+//超出范围的报错
+let a = 1500;
+let _b:u8 = match a.try_into() {
+    Ok(m)=> m,
+    Err(e) => {
+      //type annotations needed
+      //cannot infer type
+      println!("{:?}", e.to_string());
+      0
+    },
+};
+
+let b: i16 = 1500;
+let b_: u8 = match b.try_into() {
+    Ok(b1) => b1,
+    Err(e) => {
+        println!("{:?}", e.to_string());
+        0
+    }
+};
+
+
+
+  //  let  a = String::from("222");
+
+  //non-primitive cast: `String` as `i16`
+  //the trait bound `i16: From<String>` is not satisfied
+  //the following other types implement trait `From<T>`:
+  // <i16 as From<NonZeroI16>>
+  // <i16 as From<bool>>
+  // <i16 as From<i8>>
+  // <i16 as From<u8>>
+  // required for `String` to implement `Into<i16>`
+  // required for `i16` to implement `TryFrom<String>`
+  // required for `String` to implement `TryInto<i16>`
+  //  let b : i16 = a.try_into().unwrap();
+  //  println!("{}",b)
+
+}
+```
+
+tryInto 无法转换String->number,并且返回的是Result类型
+
+![image-20230504143151645](rust-new.assets/image-20230504143151645.png)
+
+
+
+
+
+
+
+## 42.4 通用类型转换
+
+```
+
+struct Foo {
+    x: u32,
+    y: u16,
+}
+
+struct Bar {
+    a: u32,
+    b: u16,
+}
+
+fn reinterpret(foo: Foo) -> Bar {
+    let Foo { x, y } = foo;
+    Bar { a: x, b: y }
+}
+
+fn reinterpret1(foo:Foo)->Bar{
+  Bar { a: foo.x, b: foo.y}
+}
+
+fn main() { 
+
+}
+
+```
+
+
+
+
+
+## 42.5 字符串与数字类型转换
+
+```
+let int_value = 5;
+//整型转字符串
+let string_value = int_value.to_string();
+
+//字符串转32位有符号整型
+let back_int = string_value.parse::<i32>().unwrap();
+
+// 字符串转32位无符号整型
+let back_int = string_value.parse::<u32>().unwrap();
+
+//字符串转16位有符号整型
+let back_int = string_value.parse::<i16>().unwrap(); 
+
+```
+
+
+
+# 43 类型
+
+## 43.1 newType
+
+
+
+何为 `newtype`？简单来说，就是使用[元组结构体](https://course.rs/basic/compound-type/struct.html#元组结构体tuple-struct)的方式将已有的类型包裹起来：`struct Meters(u32);`，那么此处 `Meters` 就是一个 `newtype`。
+
+为何需要 `newtype`？Rust 这多如繁星的 Old 类型满足不了我们吗？这是因为：
+
+- 自定义类型可以让我们给出更有意义和可读性的类型名，例如与其使用 `u32` 作为距离的单位类型，我们可以使用 `Meters`，它的可读性要好得多
+- 对于某些场景，只有 `newtype` 可以很好地解决
+- 隐藏内部类型的细节
+
+
+
+![image-20230504144709046](rust-new.assets/image-20230504144709046.png)
+
+
+
+![image-20230504144909592](rust-new.assets/image-20230504144909592.png)
+
+
+
+![image-20230504144959929](rust-new.assets/image-20230504144959929.png)
+
+
+
+## 43.2 类型别名 alias
+
+![image-20230504145123933](rust-new.assets/image-20230504145123933.png)
+
+![image-20230504145202668](rust-new.assets/image-20230504145202668.png)
+
+
+
+![image-20230504145300637](rust-new.assets/image-20230504145300637.png)
+
+
+
+
+
+## 43.3 !用不返回类型
+
+![image-20230504145440507](rust-new.assets/image-20230504145440507.png)
+
+神奇的事发生了，此处 `panic` 竟然通过了编译。难道这两个宏拥有不同的返回类型？
+
+你猜的没错：`panic` 的返回值是 `!`，代表它决不会返回任何值，既然没有任何返回值，那自然不会存在分支类型不匹配的情况。
+
+# 44 [Sized 和不定长类型 DST](https://course.rs/advance/into-types/sized.html#sized-和不定长类型-dst)
+
+- 定长类型( sized )，这些类型的大小在编译时是已知的
+- 不定长类型( unsized )，与定长类型相反，它的大小只有到了程序运行时才能动态获知，这种类型又被称之为 DST
+
+## 44.1 dst
+
+读者大大们之前学过的几乎所有类型，都是固定大小的类型，包括集合 `Vec`、`String` 和 `HashMap` 等，而动态大小类型刚好与之相反：**编译器无法在编译期得知该类型值的大小，只有到了程序运行时，才能动态获知**。对于动态类型，我们使用 `DST`(dynamically sized types)或者 `unsized` 类型来称呼它。
+
+
+
+![image-20230504153255523](rust-new.assets/image-20230504153255523.png)
+
+![image-20230504153335763](rust-new.assets/image-20230504153335763.png)
+
+
+
+![image-20230504153438069](rust-new.assets/image-20230504153438069.png)
+
+
+
+## 44.2 sized特征
+
+![image-20230504153626647](rust-new.assets/image-20230504153626647.png)
+
+
+
+![image-20230504153710565](rust-new.assets/image-20230504153710565.png)
+
+
+
+## 44.3 [`Box`](https://course.rs/advance/into-types/sized.html#boxstr)
+
+
+
+```
+#![allow(unused)]
+fn main() {
+
+  //the size for values of type `str` cannot be known at compilation time
+  //the trait `Sized` is not implemented for `str`
+  let s1: Box<str> = Box::new("Hello there!" as str);
+
+  let s :Box<str> = "hello world".into();
+}
+
+```
+
+
+
+# 45 枚举和整数
+
+```
+enum MyEnum {
+    A = 1,
+    B,
+    C,
+}
+
+fn main() {
+    // 将枚举转换成整数，顺利通过
+    let x = MyEnum::C as i32;
+
+    // 将整数转换为枚举，失败
+    match x {
+        MyEnum::A => {}
+        MyEnum::B => {}
+        MyEnum::C => {}
+        _ => {}
+    }
+}
+MyEnum::A => {} mismatched types, expected i32, found enum MyEnum。
+```
+
+
+
+## 45.1 使用第三方库
+
+```
+使用三方库
+首先可以想到的肯定是三方库，毕竟 Rust 的生态目前已经发展的很不错，类似的需求总是有的，这里我们先使用num-traits和num-derive来试试。
+
+在Cargo.toml中引入：
+
+
+[dependencies]
+num-traits = "0.2.14"
+num-derive = "0.3.3"
+代码如下:
+
+
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
+
+#[derive(FromPrimitive)]
+enum MyEnum {
+    A = 1,
+    B,
+    C,
+}
+
+fn main() {
+    let x = 2;
+
+    match FromPrimitive::from_i32(x) {
+        Some(MyEnum::A) => println!("Got A"),
+        Some(MyEnum::B) => println!("Got B"),
+        Some(MyEnum::C) => println!("Got C"),
+        None            => println!("Couldn't convert {}", x),
+    }
+}
+除了上面的库，还可以使用一个较新的库: num_enums。
+
+
+```
+
+
+
+## 45.2 [TryFrom + 宏](https://course.rs/advance/into-types/enum-int.html#tryfrom--宏)
+
+
+
+在 Rust 1.34 后，可以实现`TryFrom`特征来做转换:
+
+```rust
+use std::convert::TryFrom;
+
+impl TryFrom<i32> for MyEnum {
+    type Error = ();
+
+    fn try_from(v: i32) -> Result<Self, Self::Error> {
+        match v {
+            x if x == MyEnum::A as i32 => Ok(MyEnum::A),
+            x if x == MyEnum::B as i32 => Ok(MyEnum::B),
+            x if x == MyEnum::C as i32 => Ok(MyEnum::C),
+            _ => Err(()),
+        }
+    }
+}
+```
+
+以上代码定义了从`i32`到`MyEnum`的转换，接着就可以使用`TryInto`来实现转换：
+
+```rust
+use std::convert::TryInto;
+
+fn main() {
+    let x = MyEnum::C as i32;
+
+    match x.try_into() {
+        Ok(MyEnum::A) => println!("a"),
+        Ok(MyEnum::B) => println!("b"),
+        Ok(MyEnum::C) => println!("c"),
+        Err(_) => eprintln!("unknown number"),
+    }
+}
+```
+
+但是上面的代码有个问题，你需要为每个枚举成员都实现一个转换分支，非常麻烦。好在可以使用宏来简化，自动根据枚举的定义来实现`TryFrom`特征:
+
+```rust
+#[macro_export]
+macro_rules! back_to_enum {
+    ($(#[$meta:meta])* $vis:vis enum $name:ident {
+        $($(#[$vmeta:meta])* $vname:ident $(= $val:expr)?,)*
+    }) => {
+        $(#[$meta])*
+        $vis enum $name {
+            $($(#[$vmeta])* $vname $(= $val)?,)*
+        }
+
+        impl std::convert::TryFrom<i32> for $name {
+            type Error = ();
+
+            fn try_from(v: i32) -> Result<Self, Self::Error> {
+                match v {
+                    $(x if x == $name::$vname as i32 => Ok($name::$vname),)*
+                    _ => Err(()),
+                }
+            }
+        }
+    }
+}
+
+back_to_enum! {
+    enum MyEnum {
+        A = 1,
+        B,
+        C,
+    }
+}
+```
+
+
+
+## 45.3 [邪恶之王 std::mem::transmute](https://course.rs/advance/into-types/enum-int.html#邪恶之王-stdmemtransmute)
+
+**这个方法原则上并不推荐，但是有其存在的意义，如果要使用，你需要清晰的知道自己为什么使用**。
+
+在之前的类型转换章节，我们提到过非常邪恶的[`transmute`转换](https://course.rs/advance/into-types/converse.html#变形记transmutes)，其实，当你知道数值一定不会超过枚举的范围时(例如枚举成员对应 1，2，3，传入的整数也在这个范围内)，就可以使用这个方法完成变形。
+
+> 最好使用#[repr(..)]来控制底层类型的大小，免得本来需要 i32，结果传入 i64，最终内存无法对齐，产生奇怪的结果
+
+```rust
+#[repr(i32)]
+enum MyEnum {
+    A = 1, B, C
+}
+
+fn main() {
+    let x = MyEnum::C;
+    let y = x as i32;
+    let z: MyEnum = unsafe { std::mem::transmute(y) };
+
+    // match the enum that came from an int
+    match z {
+        MyEnum::A => { println!("Found A"); }
+        MyEnum::B => { println!("Found B"); }
+        MyEnum::C => { println!("Found C"); }
+    }
+}
+```
+
+既然是邪恶之王，当然得有真本事，无需标准库、也无需 unstable 的 Rust 版本，我们就完成了转换！awesome!??
+
+
+
+# 46 Box<T>
+
+
+
+## 46.1 rust 堆栈
+
+![image-20230504161211521](rust-new.assets/image-20230504161211521.png)
+
+
+
+## 46.2 堆栈的性能
+
+![image-20230504161337115](rust-new.assets/image-20230504161337115.png)
+
+
+
+## 46.3 [Box 的使用场景](https://course.rs/advance/smart-pointer/box.html#box-的使用场景)
+
+![image-20230504161428636](rust-new.assets/image-20230504161428636.png)
+
+
+
+## 46.4 将数据存储在堆上
+
+如果一个变量拥有一个数值 `let a = 3`，那变量 `a` 必然是存储在栈上的，那如果我们想要 `a` 的值存储在堆上就需要使用 `Box<T>`：
+
+```rust
+fn main() {
+  //分配在栈上
+  let x = 2;
+
+  //分配在堆上
+  let x :Box<i32> = Box::new(32);
+   // 下面一行代码将报错
+    // let b = a + 1; // cannot add `{integer}` to `Box<{integer}>`
+}
+
+```
+
+![image-20230504161901925](rust-new.assets/image-20230504161901925.png)
+
+
+
+## 46.5 [避免栈上数据的拷贝](https://course.rs/advance/smart-pointer/box.html#避免栈上数据的拷贝)
+
+- ==栈数据所有权转换，是copy一份新的==
+- ==堆上的所有权转移，是指针的转移==
+
+当栈上数据转移所有权时，实际上是把数据拷贝了一份，最终新旧变量各自拥有不同的数据，因此所有权并未转移。
+
+而堆上则不然，底层数据并不会被拷贝，转移所有权仅仅是复制一份栈中的指针，再将新的指针赋予新的变量，然后让拥有旧指针的变量失效，最终完成了所有权的转移：
+
+```
+fn main(){
+  let arr = [0;1000];
+
+  let arr1 = arr;
+
+  println!("arr的地址是-{:?},arr1的地址是-{:?}",arr.as_ptr(),arr1.as_ptr());
+  //因为是发生拷贝，所以不会有问题
+  println!("arr.len-{},arr1.len-{}",arr.len(),arr1.len());
+
+  let arr = Box::new([0;1000]);
+  println!("arr的地址是-{:p}",&arr);
+  let arr1 = arr;
+  println!("arr1的地址是-{:p}",&arr1);
+
+   //因为是发生拷贝，所以不会有问题
+   //borrow of moved value: `arr`
+  //value borrowed here after move    
+  //  println!("arr.len-{:?},arr1.len-{}",arr.len(),arr1.len());
+}
+```
+
+
+
+## 46.6 [将动态大小类型变为 Sized 固定大小类型](https://course.rs/advance/smart-pointer/box.html#将动态大小类型变为-sized-固定大小类型)
+
+![image-20230504163030826](rust-new.assets/image-20230504163030826.png)
+
+
+
+## 46.7 特征对象
+
+```
+trait Draw {
+    fn draw(&self);
+}
+
+struct Button{}
+
+
+struct Top{}
+
+impl Draw for Button {
+    
+    fn draw(&self) {
+        println!("Button-draw")
+    }
+}
+
+impl Draw for Top {
+    fn draw(&self) {
+      println!("Top-draw")
+
+    }
+}
+
+fn main(){
+  let list:Vec<Box<dyn Draw>> =  vec![Box::new(Button{}),Box::new(Top{})];
+
+  for i in list{
+    i.draw()
+  }
+  
+}
+
+Button-draw
+Top-draw
+```
+
+
+
+以上代码将不同类型的 `Button` 和 `Select` 包装成 `Draw` 特征的特征对象，放入一个数组中，`Box<dyn Draw>` 就是特征对象。
+
+其实，特征也是 DST 类型，而特征对象在做的就是将 DST 类型转换为固定大小类型。
+
+
+
+## 46.8 内存布局
+
+![image-20230504171133724](rust-new.assets/image-20230504171133724.png)
+
+## 46.9 Box::leak
+
+![image-20230504171432693](rust-new.assets/image-20230504171432693.png)
+
+
+
 
 
 
