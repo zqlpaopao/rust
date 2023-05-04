@@ -6962,65 +6962,66 @@ Top-draw
 
 
 # 47 cargo 发布配置
-![image-20230504205421710](rust-new.assets/image-20230504205421710.png)
+
+![image-20230504205421710](rust-new.assets/image-20230504205421710-3208266.png)
 
 ## 47.1 通过release profile自定义构建
 
-![image-20230504205546551](rust-new.assets/image-20230504205546551.png)
+![image-20230504205546551](rust-new.assets/image-20230504205546551-3208266.png)
 
 
 
-![image-20230504210042357](rust-new.assets/image-20230504210042357.png)
+![image-20230504210042357](rust-new.assets/image-20230504210042357-3208266.png)
 
-![image-20230504205945727](rust-new.assets/image-20230504205945727.png)
+![image-20230504205945727](rust-new.assets/image-20230504205945727-3208266.png)
 
 
 
 ## 47.2 文档注释
 
-![image-20230504210314287](rust-new.assets/image-20230504210314287.png)
+![image-20230504210314287](rust-new.assets/image-20230504210314287-3208266.png)
 
 
 
-![image-20230504210339901](rust-new.assets/image-20230504210339901.png)
+![image-20230504210339901](rust-new.assets/image-20230504210339901-3208266.png)
 
 
 
-![image-20230504210506746](rust-new.assets/image-20230504210506746.png)
+![image-20230504210506746](rust-new.assets/image-20230504210506746-3208266.png)
 
 
 
-![image-20230504210621779](rust-new.assets/image-20230504210621779.png)
+![image-20230504210621779](rust-new.assets/image-20230504210621779-3208266.png)
 
 
 
-![image-20230504210825166](rust-new.assets/image-20230504210825166.png)
+![image-20230504210825166](rust-new.assets/image-20230504210825166-3208266.png)
 
-![image-20230504210857626](rust-new.assets/image-20230504210857626.png)
+![image-20230504210857626](rust-new.assets/image-20230504210857626-3208266.png)
 
 
 
 ## 47.3 pub use
 
-![image-20230504211112345](rust-new.assets/image-20230504211112345.png)
+![image-20230504211112345](rust-new.assets/image-20230504211112345-3208266.png)
 
 
 
-![image-20230504211240475](rust-new.assets/image-20230504211240475.png)
+![image-20230504211240475](rust-new.assets/image-20230504211240475-3208266.png)
 
 
 
 
 
-![image-20230504211338310](rust-new.assets/image-20230504211338310.png)
+![image-20230504211338310](rust-new.assets/image-20230504211338310-3208266.png)
 
 
 
-![image-20230504211351022](rust-new.assets/image-20230504211351022.png)
+![image-20230504211351022](rust-new.assets/image-20230504211351022-3208266.png)
 
 
 
-![image-20230504211444161](rust-new.assets/image-20230504211444161.png)
+![image-20230504211444161](rust-new.assets/image-20230504211444161-3208266.png)
 
 
 
@@ -7034,9 +7035,9 @@ crate.io 创建账号
 
 用户设置-》api-token
 
-![image-20230504211554305](rust-new.assets/image-20230504211554305.png)
+![image-20230504211554305](rust-new.assets/image-20230504211554305-3208266.png)
 
-![image-20230504211614517](rust-new.assets/image-20230504211614517.png)
+![image-20230504211614517](rust-new.assets/image-20230504211614517-3208266.png)
 
 
 
@@ -7048,45 +7049,47 @@ crate.io 创建账号
 - vension 
 - auther
 
-![image-20230504211743909](rust-new.assets/image-20230504211743909.png)
+![image-20230504211743909](rust-new.assets/image-20230504211743909-3208266.png)
 
 发布
 
-![image-20230504211904033](rust-new.assets/image-20230504211904033.png)
+![image-20230504211904033](rust-new.assets/image-20230504211904033-3208266.png)
 
 版本发布
 
-![image-20230504212022017](rust-new.assets/image-20230504212022017.png)
+![image-20230504212022017](rust-new.assets/image-20230504212022017-3208266.png)
 
 
 
 撤回发布版本
 
-![image-20230504212147258](rust-new.assets/image-20230504212147258.png)
+![image-20230504212147258](rust-new.assets/image-20230504212147258-3208266.png)
 
 ## 47.5 工作空间workspace
 
-![image-20230504212248846](rust-new.assets/image-20230504212248846.png)
+![image-20230504212248846](rust-new.assets/image-20230504212248846-3208266.png)
 
 
 
-![image-20230504212335200](rust-new.assets/image-20230504212335200.png)
+![image-20230504212335200](rust-new.assets/image-20230504212335200-3208266.png)
 
 
 
-![image-20230504212610362](rust-new.assets/image-20230504212610362.png)
+![image-20230504212610362](rust-new.assets/image-20230504212610362-3208266.png)
 
 
 
-![image-20230504212718200](rust-new.assets/image-20230504212718200.png)
+![image-20230504212718200](rust-new.assets/image-20230504212718200-3208266.png)
 
 
 
 依赖外部的crate
 
-![image-20230504212911365](rust-new.assets/image-20230504212911365.png)
+![image-20230504212911365](rust-new.assets/image-20230504212911365-3208266.png)
 
-![image-20230504205239273](../../../../Library/Application Support/typora-user-images/image-20230504205239273.png)
+
+
+
 
 
 
