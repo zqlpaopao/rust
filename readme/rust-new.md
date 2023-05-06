@@ -7088,6 +7088,387 @@ crate.io 创建账号
 ![image-20230504212911365](rust-new.assets/image-20230504212911365-3208266.png)
 
 
+# 48 deref解引用
+
+![image-20230506151306246](rust-new.assets/image-20230506151306246.png)
+
+
+
+## 48.1 [通过 `*` 获取引用背后的值](https://course.rs/advance/smart-pointer/deref.html#通过--获取引用背后的值)
+
+![image-20230506151344295](rust-new.assets/image-20230506151344295.png)
+
+
+
+# 49 [Rc 与 Arc 实现 1vN 所有权机制](https://course.rs/advance/smart-pointer/rc-arc.html)
+
+==`Rc` 和 `Arc` 的区别在于，后者是原子化实现的引用计数，因此是线程安全的，可以用于多线程中共享数据。==
+
+==这两者都是只读的，如果想要实现内部数据可修改，必须配合内部可变性 `RefCell` 或者互斥锁 `Mutex` 来一起使用。==
+
+## 49.1 Rc单线程
+
+```
+use std::rc::Rc;
+fn main(){
+
+  let a = String::from("value");
+
+  let b = a;
+
+  //use of moved value: `a`
+  //value used here after moverustcClick for full compiler diagnostic
+  // let c = a;
+
+
+
+  let a = Rc::new(String::from("value"));
+
+  let b = Rc::clone(&a);
+  let c = a.clone();
+
+}
+```
+
+解决单线程的 变量被单线程同事拥有多个拥有者
+
+以上代码我们使用 `Rc::new` 创建了一个新的 `Rc<String>` 智能指针并赋给变量 `a`，该指针指向底层的字符串数据。
+
+智能指针 `Rc<T>` 在创建时，还会将引用计数加 1，此时获取引用计数的关联函数 `Rc::strong_count` 返回的值将是 `1`。
+
+
+
+
+
+## 49.2 Rc::clone
+
+Rc::clone 不是真的克隆底层数据，而是对引用进行+1操作
+
+```
+use std::rc::Rc;
+fn main(){
+
+  let a = Rc::new(String::from("value"));
+  println!("{}",Rc::strong_count(&a)); //1
+
+  let b = Rc::clone(&a);
+  println!("{}",Rc::strong_count(&b));//2
+
+  {
+    let d = Rc::clone(&a);
+    println!("{}",Rc::strong_count(&d));//3
+  
+  }
+
+  let c = a.clone();//3
+  println!("{}",Rc::strong_count(&c));
+
+}
+1
+2
+3
+3
+```
+
+事实上，==`Rc<T>` 是指向底层数据的不可变的引用，因此你无法通过它来修改数据==，这也符合 Rust 的借用规则：要么存在多个不可变借用，要么只能存在一个可变借用。
+
+但是实际开发中我们往往需要对数据进行修改，这时单独使用 `Rc<T>` 无法满足我们的需求，需要配合其它数据类型来一起使用，例如内部可变性的 `RefCell<T>` 类型以及互斥锁 `Mutex<T>`。事实上，在多线程编程中，`Arc` 跟 `Mutex` 锁的组合使用非常常见，它们既可以让我们在不同的线程中共享数据，又允许在各个线程中对其进行修改。
+
+
+
+## 49.3 例子
+
+```
+use std::rc::Rc;
+
+struct Owner {
+  name :String
+}
+
+struct Gadget{
+  id : i32,
+  onwer : Rc<Owner>
+}
+
+fn main(){
+  let onwer = Rc::new(Owner{
+    name : String::from("onwer")
+  });
+
+  let gadget = Gadget{
+    id:1,
+    onwer:Rc::clone(&onwer)
+  };
+
+  let gadget1 = Gadget{
+    id:2,
+    onwer:Rc::clone(&onwer)
+  };
+  drop(onwer);
+
+  println!("id-{},onwer-{}",gadget.id,gadget.onwer.name);
+  println!("id-{},onwer-{}",gadget1.id,gadget1.onwer.name);
+}
+id-1,onwer-onwer
+id-2,onwer-onwer
+```
+
+
+
+[Rc 简单总结](https://course.rs/advance/smart-pointer/rc-arc.html#rc-简单总结)
+
+- ==`Rc/Arc` 是不可变引用，你无法修改它指向的值，只能进行读取==，如果要修改，需要配合后面章节的==内部可变性 `RefCell` 或互斥锁 `Mutex`==
+- 一旦最后一个拥有者消失，则资源会自动被回收，这个生命周期是在编译期就确定下来的
+- ==`Rc` 只能用于同一线程内部，想要用于线程之间的对象共享，你需要使用 `Arc`==
+- `Rc<T>` 是一个智能指针，实现了 `Deref` 特征，因此你无需先解开 `Rc` 指针，再使用里面的 `T`，而是可以直接使用 `T`，例如上例中的 `gadget1.owner.name`
+
+## 49.4 Arc
+
+![image-20230506170329309](rust-new.assets/image-20230506170329309.png)
+
+
+
+`Arc` 是 `Atomic Rc` 的缩写，顾名思义：原子化的 `Rc<T>` 智能指针。原子化是一种并发原语
+
+![image-20230506170428529](rust-new.assets/image-20230506170428529.png)
+
+
+
+```
+use std::sync::Arc;
+use std::thread;
+
+
+fn main(){
+  let s = Arc::new(String::from("多线程"));
+
+  //`Rc<String>` cannot be sent between threads safely
+  for i in 1..10{
+    let s1 = Arc::clone(&s);
+    let handle = thread::spawn(move ||{
+      println!("{}-{}",i,s1)
+    });
+  };
+}
+
+1-多线程
+3-多线程
+4-多线程
+2-多线程
+5-多线程
+6-多线程
+7-多线程
+8-多线程
+9-多线程
+```
+
+
+
+
+
+# 50 [Cell 与 RefCell 内部可变性](https://course.rs/advance/smart-pointer/cell-refcell.html)
+
+
+
+## 50.1 Cell 实现copy的基础类型
+
+```
+use std::{self, cell::Cell};
+
+
+fn main(){
+  let s = Cell::new("asdv");
+
+  let s1 = s.get(); //asdv
+
+  s.set("val");
+
+  let s2 = s.get();//val
+  
+  println!("s1-{} s2{}",s1,s2)
+}
+
+s1-asdv s2val
+
+```
+
+
+
+![image-20230506175117026](rust-new.assets/image-20230506175117026.png)
+
+
+
+
+
+## 50.2 Refcell 未实现copy的heap类型
+
+由于 `Cell` 类型针对的是实现了 `Copy` 特征的值类型，因此在实际开发中，`Cell` 使用的并不多，因为我们要解决的往往==是可变、不可变引用共存==导致的问题，此时就需要借助于 `RefCell` 来达成目的。
+
+[RefCell 简单总结](https://course.rs/advance/smart-pointer/cell-refcell.html#refcell-简单总结)
+
+- 与 `Cell` 用于可 `Copy` 的值不同，`RefCell` 用于引用
+- `RefCell` 只是将借用规则从编译期推迟到程序运行期，并不能帮你绕过这个规则
+- `RefCell` 适用于编译期误报或者一个引用被在多处代码使用、修改以至于难于管理借用关系时
+- 使用 `RefCell` 时，违背借用规则会导致运行期的 `panic`
+
+![image-20230506180230732](rust-new.assets/image-20230506180230732.png)
+
+
+
+![image-20230506180343694](rust-new.assets/image-20230506180343694.png)
+
+
+
+## 50.3 [选择 `Cell` 还是 `RefCell`](https://course.rs/advance/smart-pointer/cell-refcell.html#选择-cell-还是-refcell)
+
+根据本文的内容，我们可以大概总结下两者的区别：
+
+- `Cell` 只适用于 `Copy` 类型，用于提供值，而 `RefCell` 用于提供引用
+- `Cell` 不会 `panic`，而 `RefCell` 会
+
+![image-20230506180719957](rust-new.assets/image-20230506180719957.png)
+
+
+
+## 50.4 内部可用性
+
+![image-20230506181158335](rust-new.assets/image-20230506181158335.png)
+
+
+
+```
+use std::cell::RefCell;
+trait Messager {
+    fn send(&self,msg :String);
+}
+
+struct Message {
+  mes_cache : RefCell<Vec<String>>
+}
+
+impl Messager for Message {
+    fn send(&self,msg :String) {
+        self.mes_cache.borrow_mut().push(msg)
+    }
+}
+
+
+fn main(){
+    let msg = Message{
+      mes_cache : RefCell::new(vec!["hello".to_string(),"world".to_string()]),
+    };
+    msg.send("你好".to_string());
+
+    println!("{:#?}",msg.mes_cache)
+}
+
+RefCell {
+    value: [
+        "hello",
+        "world",
+        "你好",
+    ],
+}
+
+```
+
+
+
+![image-20230506182108535](rust-new.assets/image-20230506182108535.png)
+
+
+
+## 50.5 Rc+RefCell 单线程不可变多拥有者+引用类型多可变
+
+```
+use std::rc::Rc;
+use std::cell::RefCell;
+
+
+fn main(){
+  let s  = Rc::new(RefCell::new(String::from("这是单线程rc，一个变量多所有者 和 引用类型多可变RefCell（可解决编译器错误报警），基本类型用cell，实现copy的")));
+
+  let s2 = s.clone();
+  println!("s2 -{:?}",s2);
+
+  s2.borrow_mut().push_str("end!!!");
+
+  let s3 = s2.clone();
+
+
+  println!("因为是引用类型，所以导致最终一致");
+  println!("s -{:?}  ",s);
+  println!("s2 -{:?}",s2);
+  println!("s3-{:?}",s3);
+}
+
+s2 -RefCell { value: "这是单线程rc，一个变量多所有者 和 引用类型多可变RefCell（可解决编译器错误报警），基本类型用cell，实现copy的" }
+因为是引用类型，所以导致最终一致
+s -RefCell { value: "这是单线程rc，一个变量多所有者 和 引用类型多可变RefCell（可解决编译器错误报警），基本类型用cell，实现copy的end!!!" }  
+s2 -RefCell { value: "这是单线程rc，一个变量多所有者 和 引用类型多可变RefCell（可解决编译器错误报警），基本类型用cell，实现copy的end!!!" }
+s3-RefCell { value: "这是单线程rc，一个变量多所有者 和 引用类型多可变RefCell（可解决编译器错误报警），基本类型用cell，实现copy的end!!!" }
+```
+
+
+
+## 50.6 内存消耗
+
+![image-20230506183541836](rust-new.assets/image-20230506183541836.png)
+
+
+
+## 50.7 [通过 `Cell::from_mut` 解决借用冲突](https://course.rs/advance/smart-pointer/cell-refcell.html#通过-cellfrom_mut-解决借用冲突)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
