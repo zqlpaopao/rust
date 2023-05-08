@@ -7419,7 +7419,336 @@ s3-RefCell { value: "这是单线程rc，一个变量多所有者 和 引用类�
 
 ## 50.7 [通过 `Cell::from_mut` 解决借用冲突](https://course.rs/advance/smart-pointer/cell-refcell.html#通过-cellfrom_mut-解决借用冲突)
 
+在 Rust 1.37 版本中新增了两个非常实用的方法：
 
+- Cell::from_mut，该方法将 `&mut T` 转为 `&Cell<T>`
+- Cell::as_slice_of_cells，该方法将 `&Cell<[T]>` 转为 `&[Cell<T>]`
+
+这里我们不做深入的介绍，但是来看看如何使用这两个方法来解决一个常见的借用冲突问题：
+
+```rust
+fn is_even(i: i32) -> bool {
+    i % 2 == 0
+}
+
+fn retain_even(nums: &mut Vec<i32>) {
+    let mut i = 0;
+    for num in nums.iter().filter(|&num| is_even(*num)) {
+        nums[i] = *num;
+        i += 1;
+    }
+    nums.truncate(i);
+}
+```
+
+以上代码会报错：
+
+```console
+error[E0502]: cannot borrow `*nums` as mutable because it is also borrowed as immutable
+ --> src/main.rs:8:9
+  |
+7 |     for num in nums.iter().filter(|&num| is_even(*num)) {
+  |                ----------------------------------------
+  |                |
+  |                immutable borrow occurs here
+  |                immutable borrow later used here
+8 |         nums[i] = *num;
+  |         ^^^^ mutable borrow occurs here
+```
+
+很明显，报错是因为同时借用了不可变与可变引用，你可以通过索引的方式来避免这个问题：
+
+```rust
+fn retain_even(nums: &mut Vec<i32>) {
+    let mut i = 0;
+    for j in 0..nums.len() {
+        if is_even(nums[j]) {
+            nums[i] = nums[j];
+            i += 1;
+        }
+    }
+    nums.truncate(i);
+}
+```
+
+但是这样就违背我们的初衷了，毕竟迭代器会让代码更加简洁，那么还有其它的办法吗？
+
+这时就可以使用 `Cell` 新增的这两个方法：
+
+```rust
+use std::cell::Cell;
+
+fn retain_even(nums: &mut Vec<i32>) {
+    let slice: &[Cell<i32>] = Cell::from_mut(&mut nums[..])
+        .as_slice_of_cells();
+
+    let mut i = 0;
+    for num in slice.iter().filter(|num| is_even(num.get())) {
+        slice[i].set(num.get());
+        i += 1;
+    }
+
+    nums.truncate(i);
+}
+```
+
+此时代码将不会报错，因为 `Cell` 上的 `set` 方法获取的是不可变引用 `pub fn set(&self, val: T)`。
+
+当然，以上代码的本质还是对 `Cell` 的运用，只不过这两个方法可以很方便的帮我们把 `&mut [T]` 类型转换成 `&[Cell<T>]` 类型。
+
+# 51 [Weak 与循环引用](https://course.rs/advance/circle-self-ref/circle-reference.html#weak-与循环引用)
+
+
+
+## 51.1 weak
+
+`Weak` 通过 `use std::rc::Weak` 来引入，它具有以下特点:
+
+- 可访问，但没有所有权，不增加引用计数，因此不会影响被引用值的释放回收
+- 可由 `Rc<T>` 调用 `downgrade` 方法转换成 `Weak<T>`
+- `Weak<T>` 可使用 `upgrade` 方法转换成 `Option<Rc<T>>`，如果资源已经被释放，则 `Option` 的值是 `None`
+- 常用于解决循环引用的问题
+
+![image-20230508115806966](rust-new.assets/image-20230508115806966.png)
+
+==有待考察==
+
+```
+use std::rc::Rc;
+fn main(){
+  let five = Rc::new(5);
+
+  //创建weak指针
+  let down = Rc::downgrade(&five);
+
+  //获取值
+  let down_1 = down.upgrade();
+
+  println!("{:?}",down_1);
+
+  drop(five);
+
+  let up = down.upgrade();
+
+  println!("{:?}",up);
+
+
+  // 创建Rc，持有一个值5
+  let five = Rc::new(5);
+
+  // 通过Rc，创建一个Weak指针
+  let weak_five = Rc::downgrade(&five);
+
+  // Weak引用的资源依然存在，取到值5
+  let strong_five: Option<Rc<_>> = weak_five.upgrade();
+ println!("{:?}",strong_five);
+
+  // 手动释放资源`five`
+  drop(five);
+  // println!("{}",five);
+
+  // Weak引用的资源已不存在，因此返回None
+  let strong_five: Option<Rc<_>> = weak_five.upgrade();
+  match strong_five {
+      Some(v)=> println!("{}",v),
+      None=>println!("none")
+  }
+  // println!("{:?}",strong_five);
+
+}
+
+Some(5)
+Some(5)
+Some(5)
+5
+```
+
+
+
+# 52 多线程并发编程
+
+## 52.1 线程屏障 barrier
+
+在 Rust 中，可以使用 `Barrier` 让多个线程都执行到某个点后，才继续一起往后执行：
+
+```
+use std::sync::{Arc, Barrier};
+use std::thread;
+
+
+fn main(){
+  let mut handles = Vec::with_capacity(6);
+
+  let barrier = Arc::new(Barrier::new(6));
+
+  for i in 0..6{
+    //增加多线程的引用计数
+    let b = barrier.clone();
+
+    let handle = thread::spawn(move ||{
+      println!("befer-{}",i);
+      b.wait();
+      println!("after-{}",i);
+    });
+
+    handles.push(handle);
+  }
+
+  for i in handles{
+    i.join().unwrap();
+  }
+
+}
+
+befer-1
+befer-0
+befer-5
+befer-2
+befer-3
+befer-4
+after-4
+after-2
+after-0
+after-5
+after-3
+after-1
+```
+
+
+
+## 52.2 [线程局部变量(Thread Local Variable)](https://course.rs/advance/concurrency-with-threads/thread.html#线程局部变量thread-local-variable)
+
+### 52.1 ==标准库thread_local==
+
+```
+use  std::thread;
+use std::cell::RefCell;
+
+fn main(){
+  thread_local! {static FOO : RefCell<i32> = RefCell::new(1)};
+
+  FOO.with(|f|{
+      assert_eq!(*f.borrow(),1);
+      *f.borrow_mut() = 2;
+  });
+
+  //每个线程拿到Foo的初始值main的 调用前面的
+  let t = thread::spawn(move ||{
+    FOO.with(|f|{
+      assert_eq!(*f.borrow(),1);
+      *f.borrow_mut() = 3;
+    })
+  });
+
+  t.join().unwrap();
+
+  FOO.with(|f|{
+    assert_eq!(*f.borrow(),2);
+  })
+
+}
+```
+
+注意 `FOO` 使用 `static` 声明为生命周期为 `'static` 的静态变量。
+
+![image-20230508161424873](rust-new.assets/image-20230508161424873.png)
+
+
+
+### 52.2 [三方库 thread-local](https://course.rs/advance/concurrency-with-threads/thread.html#三方库-thread-local)
+
+[thread-local](https://github.com/Amanieu/thread_local-rs)
+
+```
+use std::{sync::Arc, thread};
+use thread_local::ThreadLocal;
+use std::cell::Cell;
+
+
+
+fn main(){
+  let thread_local = Arc::new(ThreadLocal::new());
+
+  for _ in 0..5{
+    let tls2 = thread_local.clone();
+    thread::spawn(move ||{
+        //将计数器+1
+        let cell = tls2.get_or(|| Cell::new(0));
+        cell.set(cell.get()+1);
+    }).join().unwrap();
+  }
+
+  //自线程结束，收集子线程改变的值
+  let tls = Arc::try_unwrap(thread_local).unwrap();
+  let total = tls.into_iter().fold(0, |x,y|{
+      x + y.get()
+  });
+
+  println!("{}",total)
+}
+
+5
+```
+
+![image-20230508170649239](rust-new.assets/image-20230508170649239.png)
+
+
+
+## 52.3 [用条件控制线程的挂起和执行](https://course.rs/advance/concurrency-with-threads/thread.html#用条件控制线程的挂起和执行)
+
+条件变量(Condition Variables)经常和 `Mutex` 一起使用，可以让线程挂起，直到某个条件发生后再继续执行：
+
+```
+use std::sync::{Arc, Mutex, Condvar};
+use std::thread;
+
+
+
+fn main(){
+  let pair = Arc::new((Mutex::new(false),Condvar::new()));
+
+  let pair2 = pair.clone();
+
+  thread::spawn(move ||{
+    let (lock,cvar) = &*pair2;
+    let mut locked = lock.lock().unwrap();
+    println!("changing locked");
+    *locked = true;
+    cvar.notify_one();
+  });
+
+  let (lock ,cvar)= &*pair;
+  
+  // 获取锁
+  lock2.lock().unwrap().push_str(" thread ");
+  // 释放锁
+  // 不用主动释放的原因是，Rust 会记住 lock() 时的作用域，离开作用域会自动释放
+  
+  let mut started = lock.lock().unwrap();
+  while !*started {
+      started = cvar.wait(started).unwrap()
+  }
+  println!("started changed");
+}
+```
+
+
+
+![image-20230508180431268](rust-new.assets/image-20230508180431268.png)
+
+
+
+
+
+![image-20230508180743053](rust-new.assets/image-20230508180743053.png)
+
+
+
+
+
+## 52.4 [只被调用一次的函数](https://course.rs/advance/concurrency-with-threads/thread.html#只被调用一次的函数)
+
+```
 use std::{sync::Once, thread};
 
 fn main(){
@@ -7447,6 +7776,21 @@ fn main(){
   h1.join().unwrap();
   println!("{}", unsafe { VALUE });
 }
+
+
+```
+
+![image-20230508181651461](rust-new.assets/image-20230508181651461.png)
+
+
+
+
+
+
+
+
+
+
 
 
 
