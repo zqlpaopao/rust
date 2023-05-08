@@ -7420,6 +7420,36 @@ s3-RefCell { value: "这是单线程rc，一个变量多所有者 和 引用类�
 ## 50.7 [通过 `Cell::from_mut` 解决借用冲突](https://course.rs/advance/smart-pointer/cell-refcell.html#通过-cellfrom_mut-解决借用冲突)
 
 
+use std::{sync::Once, thread};
+
+fn main(){
+  static mut VALUE :usize = 0;
+  static INIT:Once = Once::new();
+
+  let h = thread::spawn(||{
+    INIT.call_once(||{
+      unsafe{
+        VALUE = 1
+      }
+    });
+  });
+
+
+  let h1 = thread::spawn(||{
+    INIT.call_once(||{
+      unsafe{
+        VALUE = 2
+      }
+    });
+  });
+
+  h.join().unwrap();
+  h1.join().unwrap();
+  println!("{}", unsafe { VALUE });
+}
+
+
+
 
 
 
