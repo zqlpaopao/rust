@@ -7784,6 +7784,904 @@ fn main(){
 ![image-20230508181651461](rust-new.assets/image-20230508181651461.png)
 
 
+# 53 线程间消息传递
+
+标准库提供了通道`std::sync::mpsc`，其中`mpsc`是*multiple producer, single consumer*的缩写
+
+通道支持多个发送者，但是只支持唯一的接收者。
+
+
+
+## 53.1 [多发送者，单接收者](https://course.rs/advance/concurrency-with-threads/message-passing.html#多发送者单接收者)
+
+```
+use std::{sync::mpsc, thread,time};
+
+
+fn main(){
+
+  //创建接收者和发送者
+  let (tx,rx) = mpsc::channel();
+
+  let tx1 = tx.clone();
+
+  thread::spawn(move ||{
+    //发送数字，send返回的Result类型
+    tx1.send(1).unwrap();
+
+    //mismatched types
+    //expected type `{integer}`
+    //found enum `Option<{integer}>
+    // tx.send(Some(1)).unwrap();
+
+  });
+  let tx2 = tx.clone();
+  thread::spawn(move ||{
+    //发送数字，send返回的Result类型
+    tx2.send(2).unwrap();
+
+    //mismatched types
+    //expected type `{integer}`
+    //found enum `Option<{integer}>
+    // tx.send(Some(1)).unwrap();
+    
+  });
+
+  println!("recv-{}",rx.recv().unwrap());
+  println!("recv-{}",rx.recv().unwrap());
+
+  thread::sleep(time::Duration::from_secs(3))
+}
+
+recv-1
+recv-2
+```
+
+![image-20230509110044521](rust-new.assets/image-20230509110044521.png)
+
+
+
+## 53.2 [不阻塞的 try_recv 方法](https://course.rs/advance/concurrency-with-threads/message-passing.html#不阻塞的-try_recv-方法)
+
+除了上述`recv`方法，还可以使用`try_recv`尝试接收一次消息，该方法并**不会阻塞线程**，当通道中没有消息时，它会立刻返回一个错误：
+
+```
+use std::{sync::mpsc, thread,time};
+
+
+fn main(){
+
+  //创建接收者和发送者
+  let (tx,rx) = mpsc::channel();
+
+  let tx1 = tx.clone();
+
+  // println!("{}",Arc::strong_count(&tx1));
+  thread::spawn(move ||{
+    //发送数字，send返回的Result类型
+    tx1.send(1).unwrap();
+
+    //mismatched types
+    //expected type `{integer}`
+    //found enum `Option<{integer}>
+    // tx.send(Some(1)).unwrap();
+
+  });
+  let tx2 = tx.clone();
+  thread::spawn(move ||{
+    //发送数字，send返回的Result类型
+    tx2.send(2).unwrap();
+
+    //mismatched types
+    //expected type `{integer}`
+    //found enum `Option<{integer}>
+    // tx.send(Some(1)).unwrap();
+    
+  });
+
+  println!("recv-{:?}",rx.try_recv());
+  println!("recv-{:?}",rx.try_recv().unwrap());
+  //recv-Err(Empty)
+  //recv-1
+
+  thread::sleep(time::Duration::from_secs(3))
+}
+
+recv-Err(Empty)
+recv-1
+```
+
+![image-20230509110418067](rust-new.assets/image-20230509110418067.png)
+
+
+
+## 53.3 传输具有所有权的数据
+
+使用通道来传输数据，一样要遵循 Rust 的所有权规则：
+
+- 若值的类型实现了`Copy`特征，则直接复制一份该值，然后传输过去，例如之前的`i32`类型
+- ==若值没有实现`Copy`，则它的所有权会被转移给接收端，在发送端继续使用该值将报错==
+
+```
+use std::{sync::mpsc, thread,time};
+
+
+fn main(){
+
+  //创建接收者和发送者
+  let (tx,rx) = mpsc::channel();
+
+  let tx1 = tx.clone();
+
+  // println!("{}",Arc::strong_count(&tx1));
+  thread::spawn(move ||{
+
+    let s = "我，飞了".to_string();
+    //发送数字，send返回的Result类型
+    tx1.send(s).unwrap();
+
+    //orrow of moved value: `s`
+    //value borrowed here after move
+    // println!("{}",s);
+
+  });
+  let tx2 = tx.clone();
+  thread::spawn(move ||{
+    let s = "我，飞了2".to_string();
+
+    //发送数字，send返回的Result类型
+    tx2.send(s).unwrap();
+
+  });
+
+  println!("recv-{:?}",rx.recv());
+  println!("recv-{:?}",rx.recv().unwrap());
+  //recv-Ok("我，飞了")
+  //recv-"我，飞了2"
+
+  thread::sleep(time::Duration::from_secs(3))
+}
+```
+
+
+
+## 53.4 使用for进行接收
+
+```
+use std::{sync::mpsc, thread,time::Duration};
+
+
+fn main(){
+
+  //创建接收者和发送者
+  let (tx,rx) = mpsc::channel();
+
+  thread::spawn(move ||{
+    let vals = vec![
+      String::from("hi"),
+      String::from("from"),
+      String::from("the"),
+      String::from("thread"),
+  ];
+
+  for val in vals {
+      tx.send(val).unwrap();
+      thread::sleep(Duration::from_secs(1));
+  }
+
+  });
+  
+
+  for reve in rx{
+    println!("recv-{:?}",reve);
+  }
+  //recv-"hi"
+  //recv-"from"
+  //recv-"the"
+  //recv-"thread"
+
+
+}
+```
+
+
+
+## 54.5 多发送者
+
+由于子线程会拿走发送者的所有权，因此我们必须对发送者进行克隆，然后让每个线程拿走它的一份拷贝:
+
+![image-20230509112033379](rust-new.assets/image-20230509112033379.png)
+
+
+
+## 54.6 同步与异步
+
+```
+use std::sync::{mpsc};
+use std::thread;
+use std::time::Duration;
+
+fn main() {
+  //异步接收
+  async_func();
+
+  println!("");
+  println!("-----------------");
+  println!("");
+
+
+  //同步接收
+  sync_func();
+
+
+  thread::sleep(Duration::from_secs(3));
+
+   
+}
+
+fn async_func(){
+  let (tx,rx) = mpsc::channel();
+
+  let t1 = tx.clone();
+  thread::spawn(move ||{
+
+    println!("异步发送前");
+    t1.send(1).unwrap();
+    println!("异步发送后")
+
+  });
+
+  println!("异步接受前");
+  println!("sleep-3s");
+  thread::sleep(Duration::from_secs(3));
+  println!("revc-{}",rx.recv().unwrap());
+  println!("异步接受后");
+
+}
+
+fn sync_func(){
+  let (tx,rx) = mpsc::sync_channel(0);
+
+  thread::spawn(move ||{
+    println!("同步发送前");
+    tx.send(1).unwrap();
+    println!("同步发送后");
+
+  });
+
+  println!("同步接收前");
+  println!("sleep-3s");
+  thread::sleep(Duration::from_secs(3));
+  println!("revc-{}",rx.recv().unwrap());
+  println!("同步接受后");
+
+
+}
+
+异步接受前
+sleep-3s
+异步发送前
+异步发送后
+revc-1
+异步接受后
+
+-----------------
+
+同步接收前
+sleep-3s
+同步发送前
+revc-1
+同步接受后
+同步发送后
+
+```
+
+![image-20230509143024554](rust-new.assets/image-20230509143024554.png)
+
+![image-20230509142753032](rust-new.assets/image-20230509142753032.png)
+
+## 54.7 [关闭通道](https://course.rs/advance/concurrency-with-threads/message-passing.html#关闭通道)
+
+**所有发送者被`drop`或者所有接收者被`drop`后，通道会自动关闭**。
+
+
+
+## 54.8 传递多样数据
+
+```
+use std::sync::{mpsc};
+use std::thread;
+use std::time::Duration;
+
+#[derive(Debug)]
+struct Person{
+  name : String,
+  age : i32,
+}
+
+fn main() {
+  let (tx,rx) = mpsc::channel();
+
+  let t1 = tx.clone();
+  thread::spawn(move ||{
+
+
+    t1.send(Person{
+      name : "zhangSan".to_string(),
+      age :28,
+    }).unwrap();
+
+  });
+  drop(tx);
+
+  println!("revc-{:?}",rx.recv().unwrap());
+
+  match rx.recv() {
+    Ok(v)=> println!("{:?}",v),
+    Err(e)=>println!("err-{}",e),
+      
+  };
+
+  thread::sleep(Duration::from_secs(3));
+
+   
+}
+
+revc-Person { name: "zhangSan", age: 28 }
+err-receiving on a closed channel
+```
+
+
+
+**enum**
+
+```
+use std::sync::mpsc::{self, Receiver, Sender};
+
+enum Fruit {
+    Apple(u8),
+    Orange(String)
+}
+
+fn main() {
+    let (tx, rx): (Sender<Fruit>, Receiver<Fruit>) = mpsc::channel();
+
+    tx.send(Fruit::Orange("sweet".to_string())).unwrap();
+    tx.send(Fruit::Apple(2)).unwrap();
+
+    for _ in 0..2 {
+        match rx.recv().unwrap() {
+            Fruit::Apple(count) => println!("received {} apples", count),
+            Fruit::Orange(flavor) => println!("received {} oranges", flavor),
+        }
+    }
+}
+
+```
+
+
+
+## 54.9 容易发生的坑
+
+![image-20230509145343454](rust-new.assets/image-20230509145343454.png)
+
+## 54.10 [mpmc 更好的性能](https://course.rs/advance/concurrency-with-threads/message-passing.html#mpmc-更好的性能)
+
+如果你需要 mpmc(多发送者，多接收者)或者需要更高的性能，可以考虑第三方库:
+
+- [**crossbeam-channel**](https://github.com/crossbeam-rs/crossbeam/tree/master/crossbeam-channel), 老牌强库，功能较全，性能较强，之前是独立的库，但是后面合并到了`crossbeam`主仓库中
+- [**flume**](https://github.com/zesterer/flume), 官方给出的性能数据某些场景要比 crossbeam 更好些
+
+# 54 线程同步
+
+## 54.1 锁 Mutex
+
+`Mutex`让多个线程并发的访问同一个值变成了排队访问：同一时间，只允许一个线程`A`访问该值，其它线程需要等待`A`访问完成后才能继续。
+
+![image-20230509161248401](rust-new.assets/image-20230509161248401.png)
+
+
+
+## 54.2 死锁
+
+![image-20230509161505251](rust-new.assets/image-20230509161505251.png)
+
+```
+use std::sync::Mutex;
+
+
+
+fn main(){
+    let mutx = Mutex::new(5);
+
+    let mut num = mutx.lock().unwrap();
+
+    *num = 6;
+
+    drop(num);
+
+    let mut num1 = mutx.lock().unwrap();
+    *num1 = 7;
+    println!("{}",num1);
+
+}
+7
+```
+
+
+
+## 54.3 多线程间使用mutex
+
+```
+use std::sync::{Arc, Mutex};
+use std::thread;
+
+
+
+
+fn main(){
+    let mut handles = Vec::with_capacity(6);
+
+    let mtx = Arc::new(Mutex::new(6));
+
+
+    for i in 0..6{
+        let lock = mtx.clone();
+        handles.push(thread::spawn(move ||{
+            let mut num = lock.lock().unwrap();
+                *num = i
+        }));
+    }
+
+    for i in handles{
+        i.join().unwrap();
+    }
+
+    println!("{:?}",mtx)
+}
+
+Mutex { data: 4, poisoned: false, .. }
+```
+
+## 54.4 内部可变性
+
+![image-20230509164736990](rust-new.assets/image-20230509164736990.png)
+
+
+
+## 54.5 死锁
+
+![image-20230509164831293](rust-new.assets/image-20230509164831293.png)
+
+**多线程死锁**
+
+当我们拥有两个锁，且两个线程各自使用了其中一个锁，然后试图去访问另一个锁时，就可能发生死锁：
+
+```
+use std::{sync::{Mutex, MutexGuard}, thread};
+use std::thread::sleep;
+use std::time::Duration;
+
+use lazy_static::lazy_static;
+lazy_static! {
+    static ref MUTEX1: Mutex<i64> = Mutex::new(0);
+    static ref MUTEX2: Mutex<i64> = Mutex::new(0);
+}
+
+fn main() {
+    // 存放子线程的句柄
+    let mut children = vec![];
+    for i_thread in 0..2 {
+        children.push(thread::spawn(move || {
+            for _ in 0..1 {
+                // 线程1
+                if i_thread % 2 == 0 {
+                    // 锁住MUTEX1
+                    let guard: MutexGuard<i64> = MUTEX1.lock().unwrap();
+
+                    println!("线程 {} 锁住了MUTEX1，接着准备去锁MUTEX2 !", i_thread);
+
+                    // 当前线程睡眠一小会儿，等待线程2锁住MUTEX2
+                    sleep(Duration::from_millis(10));
+
+                    // 去锁MUTEX2
+                    let guard = MUTEX2.lock().unwrap();
+                // 线程2
+                } else {
+                    // 锁住MUTEX2
+                    let _guard = MUTEX2.lock().unwrap();
+
+                    println!("线程 {} 锁住了MUTEX2, 准备去锁MUTEX1", i_thread);
+
+                    let _guard = MUTEX1.lock().unwrap();
+                }
+            }
+        }));
+    }
+
+    // 等子线程完成
+    for child in children {
+        let _ = child.join();
+    }
+
+    println!("死锁没有发生");
+}
+
+```
+
+![image-20230509165028781](rust-new.assets/image-20230509165028781.png)
+
+
+
+## 54.5 [try_lock](https://course.rs/advance/concurrency-with-threads/sync1.html#try_lock)
+
+与`lock`方法不同，`try_lock`会**尝试**去获取一次锁，如果无法获取会返回一个错误，因此**不会发生阻塞**:
+
+```
+use std::sync::{Arc, Mutex};
+use std::thread;
+
+
+
+
+fn main(){
+    let mut handles = Vec::with_capacity(6);
+
+    let mtx = Arc::new(Mutex::new(6));
+
+
+    for i in 0..6{
+        let lock = mtx.clone();
+        handles.push(thread::spawn(move ||{
+            thread::sleep(std::time::Duration::from_secs(5));
+            let mut num = lock.lock().unwrap();
+                *num = i
+        }));
+    }
+
+    //等待子线程执行
+    thread::sleep(std::time::Duration::from_secs(1));
+
+    let try_lock = mtx.try_lock().unwrap();
+    println!("----{}",try_lock);
+    drop(try_lock);
+
+    for i in handles{
+        i.join().unwrap();
+    }
+
+    println!("{:?}",mtx)
+}
+----6
+Mutex { data: 2, poisoned: false, .. }
+```
+
+
+
+## 54.6[读写锁 RwLock](https://course.rs/advance/concurrency-with-threads/sync1.html#读写锁-rwlock)
+
+`Mutex`会对每次读写都进行加锁，但某些时候，我们需要大量的并发读，`Mutex`就无法满足需求了，此时就可以使用`RwLock`:
+
+```
+use std::sync::RwLock;
+
+fn main() {
+    let lock = RwLock::new(5);
+
+    // 同一时间允许多个读
+    {
+        let r1 = lock.read().unwrap();
+        let r2 = lock.read().unwrap();
+        assert_eq!(*r1, 5);
+        assert_eq!(*r2, 5);
+    } // 读锁在此处被drop
+
+    // 同一时间只允许一个写
+    {
+        let mut w = lock.write().unwrap();
+        *w += 1;
+        assert_eq!(*w, 6);
+
+        // 以下代码会panic，因为读和写不允许同时存在
+        // 写锁w直到该语句块结束才被释放，因此下面的读锁依然处于`w`的作用域中
+        // let r1 = lock.read();
+        // println!("{:?}",r1);
+    }// 写锁在此处被drop
+}
+
+```
+
+![image-20230509171010230](rust-new.assets/image-20230509171010230.png)
+
+
+
+## 54.7 [三方库提供的锁实现](https://course.rs/advance/concurrency-with-threads/sync1.html#三方库提供的锁实现)
+
+标准库在设计时总会存在取舍，因为往往性能并不是最好的，如果你追求性能，可以使用三方库提供的并发原语:
+
+- [parking_lot](https://crates.io/crates/parking_lot), 功能更完善、稳定，社区较为活跃，star 较多，更新较为活跃
+- [spin](https://crates.io/crates/spin), 在多数场景中性能比`parking_lot`高一点，最近没怎么更新
+
+如果不是追求特别极致的性能，建议选择前者。
+
+
+
+## 54.8 [用条件变量(Condvar)控制线程的同步](https://course.rs/advance/concurrency-with-threads/sync1.html#用条件变量condvar控制线程的同步)
+
+`Mutex`用于解决资源安全访问的问题，但是我们还需要一个手段来解决资源访问顺序的问题。而 Rust 考虑到了这一点，为我们提供了条件变量(Condition Variables)，它经常和`Mutex`一起使用，可以让线程挂起，直到某个条件发生后再继续执行，其实`Condvar`我们在之前的多线程章节就已经见到过，现在再来看一个不同的例子：
+
+```rust
+use std::sync::{Arc,Mutex,Condvar};
+use std::thread::{spawn,sleep};
+use std::time::Duration;
+
+fn main() {
+    let flag = Arc::new(Mutex::new(false));
+    let cond = Arc::new(Condvar::new());
+    let cflag = flag.clone();
+    let ccond = cond.clone();
+
+    let hdl = spawn(move || {
+        let mut m = { *cflag.lock().unwrap() };
+        let mut counter = 0;
+
+        while counter < 3 {
+            while !m {
+                m = *ccond.wait(cflag.lock().unwrap()).unwrap();
+            }
+
+            {
+                m = false;
+                *cflag.lock().unwrap() = false;
+            }
+
+            counter += 1;
+            println!("inner counter: {}", counter);
+        }
+    });
+
+    let mut counter = 0;
+    loop {
+        sleep(Duration::from_millis(1000));
+        *flag.lock().unwrap() = true;
+        counter += 1;
+        if counter > 3 {
+            break;
+        }
+        println!("outside counter: {}", counter);
+        cond.notify_one();
+    }
+    hdl.join().unwrap();
+    println!("{:?}", flag);
+}
+```
+
+例子中通过主线程来触发子线程实现交替打印输出：
+
+```console
+outside counter: 1
+inner counter: 1
+outside counter: 2
+inner counter: 2
+outside counter: 3
+inner counter: 3
+Mutex { data: true, poisoned: false, .. }
+```
+
+## 54.9 [信号量 Semaphore](https://course.rs/advance/concurrency-with-threads/sync1.html#信号量-semaphore)
+
+![image-20230509171933624](rust-new.assets/image-20230509171933624.png)
+
+
+
+# 55 [线程同步：Atomic 原子类型与内存顺序](https://course.rs/advance/concurrency-with-threads/sync2.html#线程同步atomic-原子类型与内存顺序)
+
+## 55.1 Atomic
+
+![image-20230509173411337](rust-new.assets/image-20230509173411337.png)
+
+
+
+```
+use std::sync::atomic::{AtomicU64,Ordering};
+use std::thread::{self,JoinHandle};
+use std::time::Instant;
+use std::ops::Sub;
+
+
+
+const N_TIMES : u64 = 100000;
+const N_THREAD : usize = 10;
+
+static R : AtomicU64 = AtomicU64::new(0);
+
+fn add_time(n:u64)-> JoinHandle<()>{
+    
+        thread::spawn(move ||{
+            for _ in 0..n{
+                R.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            }
+        })
+}
+
+fn main(){
+    let s  = Instant::now();
+    println!("{:?}",s);
+
+    let mut handles = Vec::with_capacity(N_THREAD);
+
+    for _ in 0..N_THREAD{
+        handles.push(add_time(N_TIMES));
+    }
+
+    for i in handles{
+        i.join().unwrap();
+
+    }
+
+    assert_eq!(N_TIMES * N_THREAD as u64, R.load(Ordering::Relaxed));
+    println!("{}-{}",N_TIMES * N_THREAD as u64, R.load(Ordering::Relaxed));
+    
+
+    //use std::ops::Sub; 才能用sub
+    println!("{:?}",Instant::now().sub(s));
+
+}
+
+Instant { tv_sec: 8807, tv_nsec: 732274916 }
+1000000-1000000
+77.497209ms
+
+```
+
+还有一点值得注意: **和`Mutex`一样，`Atomic`的值具有内部可变性**，你无需将其声明为`mut`：
+
+![image-20230509174856258](rust-new.assets/image-20230509174856258.png)
+
+
+
+## 55.2 内存顺序
+
+内存顺序是指 CPU 在访问内存时的顺序，该顺序可能受以下因素的影响：
+
+- 代码中的先后顺序
+- 编译器优化导致在编译阶段发生改变(内存重排序 reordering)
+- 运行阶段因 CPU 的缓存机制导致顺序被打乱
+
+**[限定内存顺序的 5 个规则](https://course.rs/advance/concurrency-with-threads/sync2.html#限定内存顺序的-5-个规则)**
+
+在理解了内存顺序可能存在的改变后，你就可以明白为什么 Rust 提供了`Ordering::Relaxed`用于限定内存顺序了，事实上，该枚举有 5 个成员:
+
+- **Relaxed**， 这是最宽松的规则，它对编译器和 CPU 不做任何限制，可以乱序
+- **Release 释放**，设定内存屏障(Memory barrier)，保证它之前的操作永远在它之前，但是它后面的操作可能被重排到它前面
+- **Acquire 获取**, 设定内存屏障，保证在它之后的访问永远在它之后，但是它之前的操作却有可能被重排到它后面，往往和`Release`在不同线程中联合使用
+- **AcqRel**, 是 *Acquire* 和 *Release* 的结合，同时拥有它们俩提供的保证。比如你要对一个 `atomic` 自增 1，同时希望该操作之前和之后的读取或写入操作不会被重新排序
+- **SeqCst 顺序一致性**， `SeqCst`就像是`AcqRel`的加强版，它不管原子操作是属于读取还是写入的操作，只要某个线程有用到`SeqCst`的原子操作，线程中该`SeqCst`操作前的数据操作绝对不会被重新排在该`SeqCst`操作之后，且该`SeqCst`操作后的数据操作也绝对不会被重新排在`SeqCst`操作前。
+
+这些规则由于是系统提供的，因此其它语言提供的相应规则也大同小异，大家如果不明白可以看看其它语言的相关解释。
+
+## 55.3 [多线程中使用 Atomic](https://course.rs/advance/concurrency-with-threads/sync2.html#多线程中使用-atomic)
+
+```
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::{hint, thread};
+
+fn main() {
+    let spinlock = Arc::new(AtomicUsize::new(1));
+
+    let spinlock_clone = Arc::clone(&spinlock);
+    let thread = thread::spawn(move|| {
+        spinlock_clone.store(0, Ordering::SeqCst);
+    });
+
+    // 等待其它线程释放锁
+    while spinlock.load(Ordering::SeqCst) != 0 {
+        hint::spin_loop();
+    }
+
+    if let Err(panic) = thread.join() {
+        println!("Thread had an error: {:?}", panic);
+    }
+}
+
+```
+
+
+
+# 56 [基于 Send 和 Sync 的线程安全](https://course.rs/advance/concurrency-with-threads/send-sync.html#基于-send-和-sync-的线程安全)
+
+![image-20230509180822772](rust-new.assets/image-20230509180822772.png)
+
+
+
+![image-20230509181001312](rust-new.assets/image-20230509181001312.png)
+
+
+
+![image-20230509181056923](rust-new.assets/image-20230509181056923.png)
+
+
+
+## 56.1 [为裸指针实现`Send`](https://course.rs/advance/concurrency-with-threads/send-sync.html#为裸指针实现send)
+
+```
+use std::thread;
+
+#[derive(Debug)]
+struct MyBox(*mut u8);
+unsafe impl Send for MyBox {    }
+fn main(){
+    let x = 5;
+    let my = MyBox(x as *mut u8);
+
+    let handle = thread::spawn(move ||{
+        println!("{:?}",my);
+    });
+
+    handle.join().unwrap();
+
+}
+MyBox(0x5)
+
+```
+
+
+
+![image-20230509181226742](rust-new.assets/image-20230509181226742.png)
+
+
+
+此时，我们的指针已经可以欢快的在多线程间撒欢，以上代码很简单，但有一点需要注意：`Send`和`Sync`是`unsafe`特征，实现时需要用`unsafe`代码块包裹。
+
+
+
+## 56.2 [为裸指针实现`Sync`](https://course.rs/advance/concurrency-with-threads/send-sync.html#为裸指针实现sync)
+
+![image-20230509182319096](rust-new.assets/image-20230509182319096.png)
+
+![image-20230509182525350](rust-new.assets/image-20230509182525350.png)
+
+```
+use std::{thread, sync::Arc};
+
+#[derive(Debug)]
+struct MyBox(*const u8);
+unsafe impl Send for MyBox {    }
+unsafe impl Sync for MyBox {    }
+fn main(){
+    let x = 5;
+    let my = MyBox(x as *mut u8);
+    let ac = Arc::new(my);
+
+    let acs = ac.clone();
+    let handle = thread::spawn(move ||{
+        println!("{:?}",acs);
+    });
+    //`*mut u8` cannot be shared between threads safely
+    //within `MyBox`, the trait `Sync` is not implemented for `*mut u8`
+    //required for `Arc<MyBox>` to implement `Send`
+
+
+    handle.join().unwrap();
+
+}
+```
+
+
+
+# 57 裸指针
+
+![image-20230509182117098](rust-new.assets/image-20230509182117098.png)
+
+（1）解引用后的区别，*const T指针解引用对应&T，*mut T解引用对应&mut T；
+
+（2）在安全的代码中，可以将*const T转换为*mut T，因为对于解引用之前，都是原始裸指针，原始裸指针之间转换时可以的；
+
+（3）为什么Unique的实现中，使用*const T而不是*mut T，其原因如下：
+
+
+
 
 
 
