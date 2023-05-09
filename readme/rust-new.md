@@ -7720,13 +7720,14 @@ fn main(){
   let (lock ,cvar)= &*pair;
   
   // 获取锁
-  lock2.lock().unwrap().push_str(" thread ");
+  // lock2.lock().unwrap().push_str(" thread ");
   // 释放锁
   // 不用主动释放的原因是，Rust 会记住 lock() 时的作用域，离开作用域会自动释放
   
   let mut started = lock.lock().unwrap();
   while !*started {
-      started = cvar.wait(started).unwrap()
+      started = cvar.wait(started).unwrap();//true
+      println!("{}",started)
   }
   println!("started changed");
 }
