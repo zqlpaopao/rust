@@ -9769,6 +9769,115 @@ fn render() -> Result<String> {
 关于如何选用 `thiserror` 和 `anyhow` 只需要遵循一个原则即可：**是否关注自定义错误消息**，关注则使用 `thiserror`（常见业务代码），否则使用 `anyhow`（编写第三方库代码）。
 
 
+# 62 unsafe
+
+![image-20230511173856177](rust-new.assets/image-20230511173856177.png)
+
+## 62.1 [解引用裸指针](https://course.rs/advance/unsafe/superpowers.html#解引用裸指针)
+
+==`*const T` 和 `*mut T`，它们分别代表了不可变和可变。==
+
+![image-20230511175337546](rust-new.assets/image-20230511175337546.png)
+
+
+
+![image-20230511175421450](rust-new.assets/image-20230511175421450.png)
+
+
+
+**创建裸指针**
+
+```
+fn main(){
+
+    let mut five = 5;
+
+    let con_prt = five as *const i32;//不可变
+    let mut_prt = five as *mut i32;//可变
+}
+```
+
+![image-20230511175818274](rust-new.assets/image-20230511175818274.png)
+
+
+
+## 62.2 使用*解引用
+
+![image-20230511180051758](rust-new.assets/image-20230511180051758.png)
+
+
+
+## 62.3 [基于智能指针创建裸指针](https://course.rs/advance/unsafe/superpowers.html#基于智能指针创建裸指针)
+
+![image-20230511180143661](rust-new.assets/image-20230511180143661.png)
+
+
+
+## 62.4 [调用 unsafe 函数或方法](https://course.rs/advance/unsafe/superpowers.html#调用-unsafe-函数或方法)
+
+![image-20230511180549061](rust-new.assets/image-20230511180549061.png)
+
+
+
+```
+use std::slice;
+
+
+
+fn splait(arr   : &mut [i32],length : usize)-> (&mut [i32],&mut [i32]){
+    let len = arr.len();
+    let prt = arr.as_mut_ptr();
+
+    unsafe{
+        (
+            slice::from_raw_parts_mut(prt, length),
+            slice::from_raw_parts_mut(prt.add(length), len-length)
+        )
+    }
+}
+
+fn main(){
+
+    let mut arr =vec![1,2,3,4,5,6];
+    
+
+    //expected &mut [i32], found &Vec<i32, Global>
+    let  r = &mut arr[..];
+
+    let (first,sencond) = splait(r, 3);
+
+    assert_eq!(first,[1,2,3]);
+    assert_eq!(sencond,[4,5,6]);
+
+}
+```
+
+![image-20230511181948083](rust-new.assets/image-20230511181948083.png)
+
+## 62.5 调用C代码
+
+![image-20230511182145215](rust-new.assets/image-20230511182145215.png)
+
+![image-20230511182528066](rust-new.assets/image-20230511182528066.png)
+
+
+
+## 62.6 [实现 unsafe 特征](https://course.rs/advance/unsafe/superpowers.html#实现-unsafe-特征)
+
+![image-20230511182848535](rust-new.assets/image-20230511182848535.png)
+
+
+
+# 63 [Macro 宏编程](https://course.rs/advance/macro.html#macro-宏编程)
+
+![image-20230511183309800](rust-new.assets/image-20230511183309800.png)
+
+
+
+## 63.1 [声明式宏 `macro_rules!`](https://course.rs/advance/macro.html#声明式宏-macro_rules)
+
+
+
 
 
 
