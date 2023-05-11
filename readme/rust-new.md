@@ -8681,7 +8681,1092 @@ fn main(){
 （3）为什么Unique的实现中，使用*const T而不是*mut T，其原因如下：
 
 
+# 58 全局变量
 
+## 58.1**静态常量**
+
+全局常量可以在程序任何一部分使用，当然，如果它是定义在某个模块中，你需要引入对应的模块才能使用。常量，顾名思义它是不可变的，很适合用作静态配置：
+
+
+
+- 关键字是`const`而不是`let`
+- 定义常量必须指明类型（如 i32）不能省略
+- 定义常量时变量的命名规则一般是全部大写
+- ==常量可以在任意作用域进行定义，其生命周期贯穿整个程序的生命周期。编译时编译器会尽可能`将其内联到代码中`，所以在不同地方对同一常量的引用并不能保证引用到相同的内存地址==
+- 常量的赋值只能是常量表达式/数学表达式，也就是说必须是在编译期就能计算出的值，如果需要在运行时才能得出结果的值比如函数，则不能赋值给常量表达式
+- 对于变量出现重复的定义(绑定)会发生变量遮盖，后面定义的变量会遮住前面定义的变量，常量则不允许出现重复的定义
+
+```
+const NUMBER : usize = usize::MAX /2;
+
+fn main(){
+
+    println!("{}",NUMBER);
+}
+```
+
+
+
+## 58.2 静态变量
+
+静态变量允许声明一个全局的变量，常用于全局数据统计，例如我们希望用一个变量来统计程序当前的总请求数：
+
+```
+
+const NUMBER : usize = usize::MAX /2;
+static mut NUM :i32 = 0;
+
+fn main(){
+
+    println!("{}",NUMBER);
+    let mut n = 0;
+    unsafe{
+        NUM += 1;
+    println!("{}",NUM);
+     n = NUM.clone();
+
+
+    }
+    println!("{}",n);
+}
+9223372036854775807
+1
+1
+```
+
+![image-20230509184427994](rust-new.assets/image-20230509184427994.png)
+
+## 58.3 [原子类型](https://course.rs/advance/global-variable.html#原子类型)
+
+想要全局计数器、状态控制等功能，又想要线程安全的实现，原子类型是非常好的办法。
+
+```
+use std::sync::atomic::AtomicI64;
+static REQUEST_RECV : AtomicI64 = AtomicI64::new(0);
+
+fn main(){
+
+//    for _ in 0..=100{//101
+   for _ in 0..100{//100
+    REQUEST_RECV.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+   }
+
+   println!("{:?}",REQUEST_RECV);
+}
+
+```
+
+
+
+## 58.4 全局id生成器
+
+```
+use std::sync::atomic::{Ordering, AtomicUsize};
+
+
+static GOABLE_NUM :AtomicUsize= AtomicUsize::new(0);
+const MAX_ID: usize = usize::MAX/2;
+
+#[derive(Debug)]
+struct Factroy{
+    factroy_id : usize,
+}
+
+impl Factroy {
+    fn new()->Self{
+        Self { factroy_id: generate_id() }
+    }
+}
+
+fn generate_id()->usize{
+    let current = GOABLE_NUM.load(Ordering::Relaxed);
+    if current > MAX_ID{
+        panic!("the current number is bigger MAX_ID")
+    }
+    GOABLE_NUM.fetch_add(1, Ordering::Relaxed);
+    let goable_num = GOABLE_NUM.load(Ordering::Relaxed);
+    if goable_num > MAX_ID {
+        panic!("the current number is bigger MAX_ID")
+    }
+    println!("{}",goable_num);
+    goable_num
+}
+
+fn main(){
+    let factory = Factroy::new();
+    println!("{:?}",factory);
+    println!("{:?}",factory);
+}
+Factroy { factroy_id: 1 }
+Factroy { factroy_id: 1 }
+```
+
+## 58.5 可变更的全局变量
+
+[lazy_static](https://course.rs/advance/global-variable.html#lazy_static)
+
+[`lazy_static`](https://github.com/rust-lang-nursery/lazy-static.rs)是社区提供的非常强大的宏，用于懒初始化静态变量，之前的静态变量都是在编译期初始化的，因此无法使用函数调用进行赋值，而`lazy_static`允许我们在运行期初始化静态变量！
+
+```
+use std::sync::Mutex;
+use lazy_static::lazy_static;
+
+lazy_static!{
+    #[derive(Debug)]
+    static ref CONF: Mutex<String> = Mutex::new(String::from("the global config "));
+}
+
+
+fn main(){
+    let mut name = CONF.lock().unwrap();
+    name.push_str("change hello");
+    println!("{}",name);
+
+    drop(name);
+
+    println!("{:?}",CONF.lock());
+}
+    
+
+```
+
+当然，使用`lazy_static`在每次访问静态变量时，会有轻微的性能损失，因为其内部实现用了一个底层的并发原语`std::sync::Once`，在每次访问该变量时，程序都会执行一次原子指令用于确认静态变量的初始化是否完成。
+
+`lazy_static`宏，匹配的是`static ref`，所以定义的静态变量都是不可变引用
+
+
+
+**内存缓存的实现**
+
+```
+use std::collections::HashMap;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref HASHMAPS : HashMap <&'static str,&'static str> = {
+        let mut m = HashMap::new();
+        m.insert("path", "./");
+        m.insert("name", "name");
+        m
+    };
+}
+
+fn main(){
+    println!("{:?}",HASHMAPS.get("path"));
+    println!("{:?}",HASHMAPS.get("name"));
+}
+Some("./")
+Some("name")
+```
+
+需要注意的是，`lazy_static`直到运行到`main`中的第一行代码时，才进行初始化，非常`lazy static`。
+
+
+
+## 58.6 [Box::leak](https://course.rs/advance/global-variable.html#boxleak) 全局变量
+
+在`Box`智能指针章节中，我们提到了`Box::leak`可以用于全局变量
+
+好在`Rust`为我们提供了`Box::leak`方法，它可以将一个变量从内存中泄漏(听上去怪怪的，竟然做主动内存泄漏)，然后将其变为`'static`生命周期，最终该变量将和程序活得一样久，因此可以赋值给全局静态变量`CONFIG`。
+
+
+
+```
+#[derive(Debug)]
+struct Config  {
+     a  : String,
+    b :String,
+}
+
+static   mut  CONF : Option<&mut Config>  = None;
+
+
+fn main(){
+
+    let  c = Box::new(Config{
+        a : "a".to_string(),
+        b : "b".to_string(),
+    });
+    unsafe{
+        CONF = Some(Box::leak(c));
+        println!("{:?}",CONF);
+
+    }
+
+
+}
+
+Some(Config { a: "a", b: "b" })
+```
+
+## 58.7 从函数返回全局变量
+
+```
+#[derive(Debug)]
+struct Config {
+    a: String,
+    b: String,
+}
+static mut CONFIG: Option<&mut Config> = None;
+
+fn init() -> Option<&'static mut Config> {
+    let c = Box::new(Config {
+        a: "A".to_string(),
+        b: "B".to_string(),
+    });
+
+    Some(Box::leak(c))
+}
+
+
+fn main() {
+    unsafe {
+        CONFIG = init();
+
+        println!("{:?}", CONFIG)
+    }
+}
+
+```
+
+
+
+## 58.8 [标准库中的 OnceCell](https://course.rs/advance/global-variable.html#标准库中的-oncecell)
+
+在 `Rust` 标准库中提供 `lazy::OnceCell` 和 `lazy::SyncOnceCell` 两种 `Cell`，前者用于单线程，后者用于多线程，它们用来存储堆上的信息，并且具有最多只能赋值一次的特性。 如实现一个多线程的日志组件 `Logger`：
+
+```
+#![feature(once_cell)]
+
+use std::{lazy::SyncOnceCell, thread};
+
+fn main() {
+    // 子线程中调用
+    let handle = thread::spawn(|| {
+        let logger = Logger::global();
+        logger.log("thread message".to_string());
+    });
+
+    // 主线程调用
+    let logger = Logger::global();
+    logger.log("some message".to_string());
+
+    let logger2 = Logger::global();
+    logger2.log("other message".to_string());
+
+    handle.join().unwrap();
+}
+
+#[derive(Debug)]
+struct Logger;
+
+static LOGGER: SyncOnceCell<Logger> = SyncOnceCell::new();
+
+impl Logger {
+    fn global() -> &'static Logger {
+        // 获取或初始化 Logger
+        LOGGER.get_or_init(|| {
+            println!("Logger is being created..."); // 初始化打印
+            Logger
+        })
+    }
+
+    fn log(&self, message: String) {
+        println!("{}", message)
+    }
+}
+
+```
+
+以上代码我们声明了一个 `global()` 关联函数，并在其内部调用 `get_or_init` 进行初始化 `Logger`，之后在不同线程上多次调用 `Logger::global()` 获取其实例：
+
+```console
+Logger is being created...
+some message
+other message
+thread message
+```
+
+可以看到，`Logger is being created...` 在多个线程中使用也只被打印了一次。
+
+特别注意，目前 `OnceCell` 和 `SyncOnceCell` API 暂未稳定，需启用特性 `#![feature(once_cell)]`。
+
+# 59 Rust 中的 & 和 ref
+
+1. & 和 ref 都是用来定义指针的
+   废话少说，先看代码：
+
+
+
+    fn main() {
+        let mut a: i32 = 111;
+        let b = &a;
+        println!("{}", *b); //111
+    
+        let ref c = a;
+        println!("{}", *c); //111
+    }
+
+而这结果一样，都是在声明一个指针。区别在那里？& 放在等号的右边， ref 放在等好的左边。
+
+在看个例子，看看如何用指针修改变量：
+
+    fn main() {
+        let mut a: i32 = 111;
+        let b = &mut a; // 指针 b 本身是不可以修改的，但它指向的内容是可以修改的。
+        *b = 222;
+        println!("{}", a); // 222
+    
+        let ref mut c = a; // 指针 c 本身是不可以修改的，但它指向的内容是可以修改的。
+        *c = 333;
+        println!("{}", a); //333
+    }
+
+
+
+在代码行里，二者没有任何区别。但是，为什么弄出两个来呢？
+
+2. 只能用 & 定义指针的地方
+   看一段代码：
+
+```
+fn foo(x: &mut i32) {
+    *x = 999;
+}
+fn main() {
+    let mut a: i32 = 111;
+    foo(&mut a);
+    println!("{}", a); // 999
+}
+```
+
+
+
+在函数传参的时候用到了 & 来表示传入参数栈的是一个可修改变量的地址。
+
+下面我们修改一下，改成下面的代码：
+
+```
+fn foo(ref mut x: i32) {
+    *x = 999;
+}
+fn main() {
+    let mut a: i32 = 111;
+    foo(a);
+    println!("{}", a); // 111
+}
+```
+
+foo(a) 的调用语义是说，要把 a 的值复制到栈空间，因此，fn foo(ref mut x: i32) 中参数 x 引用的是栈上的数据。也就是说，不管函数的参数 x 如何声明，foo(a) 这种形式传入参数 a，都不可能修改变量 a 的值。我觉得这个规定是合理的，比 C++ 的引用的语义声明简单、合理多了。
+
+我们再修改一下：
+
+```
+fn foo(ref x: &mut i32) {
+    **x = 999;
+}
+fn main() {
+    let mut a: i32 = 111;
+    foo(&mut a);
+    println!("{}", a); // 999
+}
+```
+
+这次又成功了。但是这个 **x 你不觉得麻烦吧？因此，在函数参数声明中，一般只用 & 来传入变量的地址。
+
+3. 只能用 ref 定义指针的地方
+   看下面的代码：
+
+```
+fn main() {
+    let s = Some(String::from("Hello!"));
+    match s {
+        Some(t) => println!("t = {}", t),
+        _ => {}
+    }
+    println!("s = {}", s.unwrap());
+}
+
+
+```
+
+
+
+这个是无法编译的。因为 match s 语句中，已经把 s 的所有权给转移了，导致最后一条语句无法执行。编译提示如下：
+
+编译期建议在模式匹配中把变量 t 改成 ref t，也就是说把 t 声明成指针即可解决问题。修改后代码如下：
+
+```
+fn main() {
+    let s = Some(String::from("Hello!"));
+    match s {
+        Some(ref t) => println!("t = {}", t),
+        _ => {}
+    }
+    println!("s = {}", s.unwrap());
+}
+```
+
+因为在模式匹配代码块中，我们没有机会声明变量类型，只能用 ref 表示变量 t 是个指针。
+
+我试了一下，不用 ref 的话，还有一个变通的方法，就是把 match s 改成 match &s。代码如下：
+
+```
+fn main() {
+    let s = Some(String::from("Hello!"));
+    match &s {
+        Some(t) => println!("t = {}", t),
+        _ => {}
+    }
+    println!("s = {}", s.unwrap());
+}
+
+
+```
+
+
+
+这个时候 t 前面加不加 ref 结果都一样。因为 match 只是借用 s，所以不会影响 s 的生命周期。
+
+4. 更多的试验
+   下面给出了一组代码，我们看看那些是合法的，那些是非法的。
+
+
+
+    fn main() {
+        let v = 123;
+        let x: &i32 = &v; 					// OK!
+        let x: &i32 = &(123 + 456); 		// OK!
+        if let Some(x:&i32) = Some(&123); 	// Error！
+    
+        let ref x: i32 = v;					// OK!
+        let ref x: i32 = 123 + 456;			// OK!
+        if let Some(ref x) = Some(123) {}	// OK!
+    }
+
+5. 指针变量的解引用
+   看下面代码，道理我不多讲了，rust 会自动解多层嵌套引用，这个太方便了。
+
+```
+fn main() {
+    let a: &i32 = &123;
+    let b: &&i32 = &a;
+    let c: &&&i32 = &b;
+    println!("a = {}, b = {}, c = {}", a, b, c);
+	println!("*a = {}, **b = {}, ***c = {}", *a, **b, ***c);
+}
+
+/* output
+a = 123, b = 123, c = 123
+*a = 123, **b = 123, ***c = 123
+*/
+```
+
+
+# 60 错误处理
+
+
+
+## 60.1 or and
+
+跟布尔关系的与/或很像，这两个方法会对两个表达式做逻辑组合，最终返回 `Option` / `Result`。
+
+- `or()`，表达式按照顺序求值，若任何一个表达式的结果是 `Some` 或 `Ok`，则该值会立刻返回
+- `and()`，若两个表达式的结果都是 `Some` 或 `Ok`，则**第二个表达式中的值被返回**。若任何一个的结果是 `None` 或 `Err` ，则立刻返回。
+
+实际上，只要将布尔表达式的 `true` / `false`，替换成 `Some` / `None` 或 `Ok` / `Err` 就很好理解了。
+
+```
+fn main() {
+  let s1 = Some("some1");
+  let s2 = Some("some2");
+  let n: Option<&str> = None;
+
+  let o1: Result<&str, &str> = Ok("ok1");
+  let o2: Result<&str, &str> = Ok("ok2");
+  let e1: Result<&str, &str> = Err("error1");
+  let e2: Result<&str, &str> = Err("error2");
+
+  assert_eq!(s1.or(s2), s1); // Some1 or Some2 = Some1
+  assert_eq!(s1.or(n), s1);  // Some or None = Some
+  assert_eq!(n.or(s1), s1);  // None or Some = Some
+  assert_eq!(n.or(n), n);    // None1 or None2 = None2
+
+  assert_eq!(o1.or(o2), o1); // Ok1 or Ok2 = Ok1
+  assert_eq!(o1.or(e1), o1); // Ok or Err = Ok
+  assert_eq!(e1.or(o1), o1); // Err or Ok = Ok
+  assert_eq!(e1.or(e2), e2); // Err1 or Err2 = Err2
+
+  assert_eq!(s1.and(s2), s2); // Some1 and Some2 = Some2
+  assert_eq!(s1.and(n), n);   // Some and None = None
+  assert_eq!(n.and(s1), n);   // None and Some = None
+  assert_eq!(n.and(n), n);    // None1 and None2 = None1
+
+  assert_eq!(o1.and(o2), o2); // Ok1 and Ok2 = Ok2
+  assert_eq!(o1.and(e1), e1); // Ok and Err = Err
+  assert_eq!(e1.and(o1), e1); // Err and Ok = Err
+  assert_eq!(e1.and(e2), e1); // Err1 and Err2 = Err1
+}
+```
+
+除了 `or` 和 `and` 之外，Rust 还为我们提供了 `xor` ，但是它只能应用在 `Option` 上，其实想想也是这个理，如果能应用在 `Result` 上，那你又该如何对一个值和错误进行异或操作？
+
+## 60.2 [or_else() 和 and_then()](https://course.rs/advance/errors.html#or_else-和-and_then)
+
+它们跟 `or()` 和 `and()` 类似，唯一的区别在于，它们的第二个表达式是一个闭包。
+
+```
+fn main() {
+    // or_else with Option
+    let s1 = Some("some1");
+    let s2 = Some("some2");
+    let fn_some = || Some("some2"); // 类似于: let fn_some = || -> Option<&str> { Some("some2") };
+
+    let n: Option<&str> = None;
+    let fn_none = || None;
+
+    assert_eq!(s1.or_else(fn_some), s1);  // Some1 or_else Some2 = Some1
+    assert_eq!(s1.or_else(fn_none), s1);  // Some or_else None = Some
+    assert_eq!(n.or_else(fn_some), s2);   // None or_else Some = Some
+    assert_eq!(n.or_else(fn_none), None); // None1 or_else None2 = None2
+
+    // or_else with Result
+    let o1: Result<&str, &str> = Ok("ok1");
+    let o2: Result<&str, &str> = Ok("ok2");
+    let fn_ok = |_| Ok("ok2"); // 类似于: let fn_ok = |_| -> Result<&str, &str> { Ok("ok2") };
+
+    let e1: Result<&str, &str> = Err("error1");
+    let e2: Result<&str, &str> = Err("error2");
+    let fn_err = |_| Err("error2");
+
+    assert_eq!(o1.or_else(fn_ok), o1);  // Ok1 or_else Ok2 = Ok1
+    assert_eq!(o1.or_else(fn_err), o1); // Ok or_else Err = Ok
+    assert_eq!(e1.or_else(fn_ok), o2);  // Err or_else Ok = Ok
+    assert_eq!(e1.or_else(fn_err), e2); // Err1 or_else Err2 = Err2
+}
+
+```
+
+
+
+```
+fn main() {
+    // and_then with Option
+    let s1 = Some("some1");
+    let s2 = Some("some2");
+    let fn_some = |_| Some("some2"); // 类似于: let fn_some = |_| -> Option<&str> { Some("some2") };
+
+    let n: Option<&str> = None;
+    let fn_none = |_| None;
+
+    assert_eq!(s1.and_then(fn_some), s2); // Some1 and_then Some2 = Some2
+    assert_eq!(s1.and_then(fn_none), n);  // Some and_then None = None
+    assert_eq!(n.and_then(fn_some), n);   // None and_then Some = None
+    assert_eq!(n.and_then(fn_none), n);   // None1 and_then None2 = None1
+
+    // and_then with Result
+    let o1: Result<&str, &str> = Ok("ok1");
+    let o2: Result<&str, &str> = Ok("ok2");
+    let fn_ok = |_| Ok("ok2"); // 类似于: let fn_ok = |_| -> Result<&str, &str> { Ok("ok2") };
+
+    let e1: Result<&str, &str> = Err("error1");
+    let e2: Result<&str, &str> = Err("error2");
+    let fn_err = |_| Err("error2");
+
+    assert_eq!(o1.and_then(fn_ok), o2);  // Ok1 and_then Ok2 = Ok2
+    assert_eq!(o1.and_then(fn_err), e2); // Ok and_then Err = Err
+    assert_eq!(e1.and_then(fn_ok), e1);  // Err and_then Ok = Err
+    assert_eq!(e1.and_then(fn_err), e1); // Err1 and_then Err2 = Err1
+}
+```
+
+## 60.3 [filter](https://course.rs/advance/errors.html#filter)
+
+`filter` 用于对 `Option` 进行过滤：
+
+```
+fn main() {
+    let s1 = Some(3);
+    let s2 = Some(6);
+    let n = None;
+
+    let fn_is_even = |x: &i8| x % 2 == 0;
+
+    assert_eq!(s1.filter(fn_is_even), n);  // Some(3) -> 3 is not even -> None
+    assert_eq!(s2.filter(fn_is_even), s2); // Some(6) -> 6 is even -> Some(6)
+    assert_eq!(n.filter(fn_is_even), n);   // None -> no value -> None
+}
+
+```
+
+
+
+## 60.4 [map() 和 map_err()](https://course.rs/advance/errors.html#map-和-map_err)
+
+==Map 只有在Some。Ok的情况下才会进行下一步计算，否侧返回原值，不进行处理==
+
+```
+fn main() {
+    let s1 = Some("abcde");
+    let s2 = Some(5);
+
+    let n1: Option<&str> = None;
+    let n2: Option<usize> = None;
+
+    let o1: Result<&str, &str> = Ok("abcde");
+    let o2: Result<usize, &str> = Ok(5);
+
+    let e1: Result<&str, &str> = Err("abcde");
+    let e2: Result<usize, &str> = Err("abcde");
+
+    let fn_character_count = |s: &str| s.chars().count();
+
+
+    assert_eq!(s1.map(fn_character_count), s2); // Some1 map = Some2
+    assert_eq!(n1.map(fn_character_count), n2); // None1 map = None2
+    println!("{:?}",s1.map(fn_character_count)); //Some(5)
+    println!("{:?}",n1.map(fn_character_count)); //None
+
+
+    assert_eq!(o1.map(fn_character_count), o2); // Ok1 map = Ok2
+    assert_eq!(e1.map(fn_character_count), e2); // Err1 map = Err2
+
+    println!("{:?}",o1.map(fn_character_count)); //Ok(5)
+    println!("{:?}",e1.map(fn_character_count)); //Err("abced")
+
+}
+
+```
+
+
+
+==但是如果你想要将 `Err` 中的值进行改变， `map` 就无能为力了，此时我们需要用 `map_err`：==
+
+```rust
+fn main() {
+    let o1: Result<&str, &str> = Ok("abcde");
+    let o2: Result<&str, isize> = Ok("abcde");
+
+    let e1: Result<&str, &str> = Err("404");
+    let e2: Result<&str, isize> = Err(404);
+
+    let fn_character_count = |s: &str| -> isize { s.parse().unwrap() }; // 该函数返回一个 isize
+
+    assert_eq!(o1.map_err(fn_character_count), o2); // Ok1 map = Ok2
+    assert_eq!(e1.map_err(fn_character_count), e2); // Err1 map = Err2
+}
+```
+
+==通过对 `o1` 的操作可以看出，与 `map` 面对 `Err` 时的短小类似， `map_err` 面对 `Ok` 时也是相当无力的。==
+
+## 60.5 [map_or() 和 map_or_else()](https://course.rs/advance/errors.html#map_or-和-map_or_else)
+
+`map_or` 在 `map` 的基础上提供了一个默认值:
+
+```rust
+fn main() {
+    const V_DEFAULT: u32 = 1;
+
+    let s: Result<u32, ()> = Ok(10);
+    let n: Option<u32> = None;
+    let fn_closure = |v: u32| v + 2;
+
+    assert_eq!(s.map_or(V_DEFAULT, fn_closure), 12);
+    assert_eq!(n.map_or(V_DEFAULT, fn_closure), V_DEFAULT);
+}
+```
+
+如上所示，当处理 `None` 的时候，`V_DEFAULT` 作为默认值被直接返回。
+
+`map_or_else` 与 `map_or` 类似，但是它是通过一个闭包来提供默认值:
+
+```rust
+fn main() {
+    let s = Some(10);
+    let n: Option<i8> = None;
+
+    let fn_closure = |v: i8| v + 2;
+    let fn_default = || 1;
+
+    assert_eq!(s.map_or_else(fn_default, fn_closure), 12);
+    assert_eq!(n.map_or_else(fn_default, fn_closure), 1);
+
+    let o = Ok(10);
+    let e = Err(5);
+    let fn_default_for_result = |v: i8| v + 1; // 闭包可以对 Err 中的值进行处理，并返回一个新值
+
+    assert_eq!(o.map_or_else(fn_default_for_result, fn_closure), 12);
+    assert_eq!(e.map_or_else(fn_default_for_result, fn_closure), 6);
+}
+```
+
+
+
+## 60.6 [ok_or() and ok_or_else()](https://course.rs/advance/errors.html#ok_or-and-ok_or_else)
+
+这两兄弟可以将 `Option` 类型转换为 `Result` 类型。其中 `ok_or` 接收一个默认的 `Err` 参数:
+
+```rust
+fn main() {
+    const ERR_DEFAULT: &str = "error message";
+
+    let s = Some("abcde");
+    let n: Option<&str> = None;
+
+    let o: Result<&str, &str> = Ok("abcde");
+    let e: Result<&str, &str> = Err(ERR_DEFAULT);
+
+    assert_eq!(s.ok_or(ERR_DEFAULT), o); // Some(T) -> Ok(T)
+    assert_eq!(n.ok_or(ERR_DEFAULT), e); // None -> Err(default)
+}
+```
+
+而 `ok_or_else` 接收一个闭包作为 `Err` 参数:
+
+```rust
+fn main() {
+    let s = Some("abcde");
+    let n: Option<&str> = None;
+    let fn_err_message = || "error message";
+
+    let o: Result<&str, &str> = Ok("abcde");
+    let e: Result<&str, &str> = Err("error message");
+
+    assert_eq!(s.ok_or_else(fn_err_message), o); // Some(T) -> Ok(T)
+    assert_eq!(n.ok_or_else(fn_err_message), e); // None -> Err(default)
+}
+```
+
+以上列出的只是常用的一部分，强烈建议大家看看标准库中有哪些可用的 API，在实际项目中，这些 API 将会非常有用: [Option](https://doc.rust-lang.org/stable/std/option/enum.Option.html) 和 [Result](https://doc.rust-lang.org/stable/std/result/enum.Result.html)。
+
+# 61 自定义错误
+
+```
+use core::fmt;
+
+struct AppErr{
+    name : String,
+}
+
+impl fmt::Display for AppErr {
+    
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        println!("self---{}",self.name);
+        write!(f,"error")
+    }
+}
+
+fn make_error()->Result<(), AppErr>{
+    Err(AppErr{name:String::from("err")})
+}
+
+fn main(){
+    match make_error(){
+        Ok(v) => println!("ok -{:?}",v),
+        Err(e)=> println!("e-{}",e)
+    }
+
+}
+
+e-self---err
+error
+```
+
+
+
+```
+use std::fmt;
+
+// AppError 是自定义错误类型，它可以是当前包中定义的任何类型，在这里为了简化，我们使用了单元结构体作为例子。
+// 为 AppError 自动派生 Debug 特征
+#[derive(Debug)]
+struct AppError;
+
+// 为 AppError 实现 std::fmt::Display 特征
+impl fmt::Display for AppError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "An Error Occurred, Please Try Again!") // user-facing output
+    }
+}
+
+// 一个示例函数用于产生 AppError 错误
+fn produce_error() -> Result<(), AppError> {
+    Err(AppError)
+}
+
+fn main(){
+    match produce_error() {
+        Err(e) => eprintln!("{}", e),
+        _ => println!("No error"),
+    }
+
+    eprintln!("{:?}", produce_error()); // Err({ file: src/main.rs, line: 17 })
+}
+
+```
+
+![image-20230510173639910](rust-new.assets/image-20230510173639910.png)
+
+
+
+
+
+```
+use std::fmt;
+
+struct AppError {
+    code: usize,
+    message: String,
+}
+
+// 根据错误码显示不同的错误信息
+impl fmt::Display for AppError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let err_msg = match self.code {
+            404 => "Sorry, Can not find the Page!",
+            _ => "Sorry, something is wrong! Please Try Again!",
+        };
+
+        write!(f, "{}", err_msg)
+    }
+}
+
+impl fmt::Debug for AppError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "AppError {{ code: {}, message: {} }}",
+            self.code, self.message
+        )
+    }
+}
+
+fn produce_error() -> Result<(), AppError> {
+    Err(AppError {
+        code: 404,
+        message: String::from("Page not found"),
+    })
+}
+
+fn main() {
+    match produce_error() {
+        Err(e) => eprintln!("{}", e), // 抱歉，未找到指定的页面!
+        _ => println!("No error"),
+    }
+
+    eprintln!("{:?}", produce_error()); // Err(AppError { code: 404, message: Page not found })
+
+    eprintln!("{:#?}", produce_error());
+    // Err(
+    //     AppError { code: 404, message: Page not found }
+    // )
+}
+
+```
+
+## 61.1 [错误转换 `From` 特征](https://course.rs/advance/errors.html#错误转换-from-特征)
+
+![image-20230510180613850](rust-new.assets/image-20230510180613850.png)
+
+
+
+```
+use std::{io, fs::File};
+
+#[derive(Debug)]
+struct AppError{
+    kind : String,
+    msg : String,
+}
+
+impl From<io::Error> for AppError {
+    // 为 AppError 实现 std::convert::From 特征，由于 From 包含在 std::prelude 中，因此可以直接简化引入。
+    // 实现 From<io::Error> 意味着我们可以将 io::Error 错误转换成自定义的 AppError 错误
+    fn from(value: io::Error) -> Self {
+        AppError { kind: "io-error".to_string(), msg: value.to_string() }
+    }
+}
+
+fn main() -> Result<(),AppError>{
+    let _file = File::open("nonexistent_file.txt")?;
+
+    Ok(())
+}
+Error: AppError { kind: "io-error", msg: "No such file or directory (os error 2)" }
+```
+
+
+
+## 61.2 [归一化不同的错误类型](https://course.rs/advance/errors.html#归一化不同的错误类型)
+
+![image-20230511172054676](rust-new.assets/image-20230511172054676.png)
+
+
+
+## 61.2 Box \<dyn Error> 返回不同错误
+
+```
+use std::fs::read_to_string;
+use std::error::Error;
+
+
+fn render() -> Result<String,Box<dyn Error>>{
+    let file = std::env::var("MAEKDOWN")?;
+
+    let str = read_to_string(file)?;
+
+    Ok(str)
+}
+
+fn main()-> Result<(),Box<dyn Error>>{
+   let html = render()?;
+   println!("{}",html);
+   Ok(())
+}
+```
+
+==但是有一个问题：`Result` 实际上不会限制错误的类型，也就是一个类型就算不实现 `Error` 特征，它依然可以在 `Result<T, E>` 中作为 `E` 来使用，此时这种特征对象的解决方案就无能为力了。==
+
+
+
+## 61.3 [自定义错误类型](https://course.rs/advance/errors.html#自定义错误类型-1)
+
+```rust
+use std::fs::read_to_string;
+
+fn main() -> Result<(), MyError> {
+  let html = render()?;
+  println!("{}", html);
+  Ok(())
+}
+
+fn render() -> Result<String, MyError> {
+  let file = std::env::var("MARKDOWN")?;
+  let source = read_to_string(file)?;
+  Ok(source)
+}
+
+#[derive(Debug)]
+enum MyError {
+  EnvironmentVariableNotFound,
+  IOError(std::io::Error),
+}
+
+impl From<std::env::VarError> for MyError {
+  fn from(_: std::env::VarError) -> Self {
+    Self::EnvironmentVariableNotFound
+  }
+}
+
+impl From<std::io::Error> for MyError {
+  fn from(value: std::io::Error) -> Self {
+    Self::IOError(value)
+  }
+}
+
+impl std::error::Error for MyError {}
+
+impl std::fmt::Display for MyError {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      MyError::EnvironmentVariableNotFound => write!(f, "Environment variable not found"),
+      MyError::IOError(err) => write!(f, "IO Error: {}", err.to_string()),
+    }
+  }
+}
+
+```
+
+![image-20230511172946144](rust-new.assets/image-20230511172946144.png)
+
+
+
+## 61.4 [简化错误处理](https://course.rs/advance/errors.html#简化错误处理)
+
+### [thiserror](https://course.rs/advance/errors.html#thiserror)
+
+[`thiserror`](https://github.com/dtolnay/thiserror)可以帮助我们简化上面的第二种解决方案：
+
+```rust
+use std::fs::read_to_string;
+
+fn main() -> Result<(), MyError> {
+  let html = render()?;
+  println!("{}", html);
+  Ok(())
+}
+
+fn render() -> Result<String, MyError> {
+  let file = std::env::var("MARKDOWN")?;
+  let source = read_to_string(file)?;
+  Ok(source)
+}
+
+#[derive(thiserror::Error, Debug)]
+enum MyError {
+  #[error("Environment variable not found")]
+  EnvironmentVariableNotFound(#[from] std::env::VarError),
+  #[error(transparent)]
+  IOError(#[from] std::io::Error),
+}
+```
+
+如上所示，只要简单写写注释，就可以实现错误处理了，惊不惊喜？
+
+### [error-chain](https://course.rs/advance/errors.html#error-chain)
+
+[`error-chain`](https://github.com/rust-lang-deprecated/error-chain) 也是简单好用的库，可惜不再维护了，但是我觉得它依然可以在合适的地方大放光彩，值得大家去了解下。
+
+```rust
+use std::fs::read_to_string;
+
+error_chain::error_chain! {
+  foreign_links {
+    EnvironmentVariableNotFound(::std::env::VarError);
+    IOError(::std::io::Error);
+  }
+}
+
+fn main() -> Result<()> {
+  let html = render()?;
+  println!("{}", html);
+  Ok(())
+}
+
+fn render() -> Result<String> {
+  let file = std::env::var("MARKDOWN")?;
+  let source = read_to_string(file)?;
+  Ok(source)
+}
+```
+
+喏，简单吧？使用 `error-chain` 的宏你可以获得：`Error` 结构体，错误类型 `ErrorKind` 枚举 以及一个自定义的 `Result` 类型。
+
+### [anyhow](https://course.rs/advance/errors.html#anyhow)
+
+[`anyhow`](https://github.com/dtolnay/anyhow) 和 `thiserror` 是同一个作者开发的，这里是作者关于 `anyhow` 和 `thiserror` 的原话：
+
+> 如果你想要设计自己的错误类型，同时给调用者提供具体的信息时，就使用 `thiserror`，例如当你在开发一个三方库代码时。如果你只想要简单，就使用 `anyhow`，例如在自己的应用服务中。
+
+```rust
+use std::fs::read_to_string;
+
+use anyhow::Result;
+
+fn main() -> Result<()> {
+    let html = render()?;
+    println!("{}", html);
+    Ok(())
+}
+
+fn render() -> Result<String> {
+    let file = std::env::var("MARKDOWN")?;
+    let source = read_to_string(file)?;
+    Ok(source)
+}
+```
+
+关于如何选用 `thiserror` 和 `anyhow` 只需要遵循一个原则即可：**是否关注自定义错误消息**，关注则使用 `thiserror`（常见业务代码），否则使用 `anyhow`（编写第三方库代码）。
 
 
 
