@@ -9875,6 +9875,60 @@ fn main(){
 
 
 ## 63.1 [声明式宏 `macro_rules!`](https://course.rs/advance/macro.html#声明式宏-macro_rules)
+![image-20230512093656296](rust-new.assets/image-20230512093656296.png)
+
+
+
+```rust
+#[macro_export]
+macro_rules! slice  {
+   ($($x:expr),*) => {
+        {
+            let mut slice = Vec::new();
+            $(
+                slice.push($x);
+                
+            )*
+            slice
+        }
+    };
+}
+```
+
+
+
+
+
+- ==`#[macro_export]` 注释将宏进行了导出，这样其它的包就可以将该宏引入到当前作用域中==，然后才能使用。可能有同学会提问：我们在使用标准库 `vec!` 时也没有引入宏啊，那是因为 Rust 已经通过 [`std::prelude`](https://course.rs/appendix/prelude.html) 的方式为我们自动引入了。
+- ==`macro_rules!` 进行了宏定义==，需要注意的是宏的名称是 `vec`，而不是 `vec!`，后者的感叹号只在调用时才需要。
+
+
+
+虽然宏和 `match` 都称之为模式，但是前者跟[后者](https://course.rs/basic/match-pattern/all-patterns.html)的模式规则是不同的。如果大家想要更深入的了解宏的模式，可以查看[这里](https://doc.rust-lang.org/reference/macros-by-example.html)。
+
+`( $( $x:expr ),* )` 的含义
+
+- 我们使用圆括号 `()` 将整个宏模式包裹其中。紧随其后的是 `$()`，==跟括号中模式相匹配的值(传入的 Rust 源代码)会被捕获==，然后用于代码替换。在这里，模式 `$x:expr` 会匹配任何 Rust 表达式并给予该模式一个名称：`$x`。
+- `$()` 之后的逗号说明在 `$()` 所匹配的代码的后面会有一个==可选的逗号分隔符，紧随逗号之后的 `*` 说明 `*` 之前的模式会被匹配零次或任意多次(类似正则表达式)。==
+
+![image-20230512095207165](rust-new.assets/image-20230512095207165.png)
+
+
+
+![image-20230512095306665](rust-new.assets/image-20230512095306665.png)
+
+
+
+## 63.2 [用过程宏为属性标记生成代码](https://course.rs/advance/macro.html#用过程宏为属性标记生成代码)
+
+第二种常用的宏就是[*过程宏*](https://doc.rust-lang.org/reference/procedural-macros.html) ( *procedural macros* )，从形式上来看，过程宏跟函数较为相像，但过程宏是使用源代码作为输入参数，基于代码进行一系列操作后，再输出一段全新的代码。**注意，过程宏中的 derive 宏输出的代码并不会替换之前的代码，这一点与声明宏有很大的不同！**
+
+至于前文提到的过程宏的三种类型(自定义 `derive`、属性宏、函数宏)，它们的工作方式都是类似的。
+
+当**创建过程宏**时，它的定义必须要放入一个==独立的包==中，且包的类型也是特殊的，这么做的原因相当复杂，大家只要知道这种限制在未来可能会有所改变即可。
+
+![image-20230512095626514](rust-new.assets/image-20230512095626514.png)
+
 
 
 
